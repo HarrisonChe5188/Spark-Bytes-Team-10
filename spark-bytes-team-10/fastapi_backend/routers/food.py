@@ -11,9 +11,9 @@ async def create_food(food: FoodCreate):
         "allergies": food.allergies,
         "total_quantity": food.total_quantity,
         "quantity_left": food.total_quantity,
-        "event_id": food.event_id,
     }).execute()
 
     if not result.data:
         raise HTTPException(status_code=400, detail="Failed to create food")
     return result.data[0]
+
