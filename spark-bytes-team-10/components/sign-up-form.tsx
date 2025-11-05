@@ -30,6 +30,9 @@ export function SignUpForm({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=/protected`,
+          queryParams: {
+            hd: 'bu.edu', // Restrict to bu.edu domain
+          },
         },
       });
       if (error) throw error;

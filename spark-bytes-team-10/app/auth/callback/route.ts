@@ -16,6 +16,12 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // Validate bu.edu domain server-side (backup check if hd parameter is bypassed)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.email && !user.email.toLowerCase().endsWith('@bu.edu')) {
+        await supabase.auth.signOut()
+        return NextResponse.redirect(`${origin}/auth/error?error=Only Boston University (@bu.edu) email addresses are allowed`)
+      }
       const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
       const isLocalEnv = process.env.NODE_ENV === 'development'
       if (isLocalEnv) {
