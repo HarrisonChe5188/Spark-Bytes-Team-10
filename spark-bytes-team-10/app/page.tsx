@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { NewFoodButton } from "@/components/new-food-button";
-
+import  AllFoodList  from "@/components/all-food-list";
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-gray-900 dark:via-black dark:to-red-950 p-6 sm:p-12">
@@ -35,6 +35,7 @@ export default function Home() {
           <div className="flex flex-wrap gap-3">
             <NewFoodButton />
           </div>
+            <AllFoodList />
         </section>
       </main>
 

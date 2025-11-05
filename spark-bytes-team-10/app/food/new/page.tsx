@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 export default function NewFood() {
   const [name, setName] = useState("");
@@ -15,24 +16,19 @@ export default function NewFood() {
     setMessage("");
 
     try {
-        const res = await fetch("/api/food/", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify({ name, allergies, total_quantity: Number(quantity), event_id: 1 }),
-        });
+      const { data, error } = await supabase
+        .from("food")
+        .insert({
+          name,
+          allergies,
+          total_quantity: Number(quantity),
+          quantity_left: Number(quantity),
+        })
+        .select();
 
+      if (error) throw new Error(error.message);
 
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.detail || `Status ${res.status}`);
-      }
-
-      const data = await res.json();
-      setMessage(`Food "${data.name}" created successfully!`);
+      setMessage(`Food "${data[0].name}" created successfully!`);
       setName("");
       setAllergies("");
       setQuantity("");
@@ -44,7 +40,7 @@ export default function NewFood() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 shadow-lg rounded-xl border border-gray-200">
+    <div className="max-w-md mx-auto mt-10 p-6 shadow-lg rounded-xl border border-gray-200 bg-white">
       <h1 className="text-2xl font-semibold mb-4 text-center">Add New Food</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -83,9 +79,7 @@ export default function NewFood() {
 
       {message && (
         <p
-          className={`mt-4 text-center ${
-            message.startsWith("Success") ? "text-green-600" : "text-red-600"
-          }`}
+          className={`mt-4 text-center`}
         >
           {message}
         </p>
