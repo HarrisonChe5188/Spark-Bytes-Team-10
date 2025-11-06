@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 export default function NewFood() {
   const [name, setName] = useState("");
@@ -14,7 +14,7 @@ export default function NewFood() {
     e.preventDefault();
     setLoading(true);
     setMessage("");
-
+  const supabase = createClient();
     try {
       const { data, error } = await supabase
         .from("food")

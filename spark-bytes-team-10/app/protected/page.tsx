@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { NewFoodButton } from "@/components/new-food-button";
 import { createClient } from "@/lib/supabase/server";
 import { InfoIcon } from "lucide-react";
 

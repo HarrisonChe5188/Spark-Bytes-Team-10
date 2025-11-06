@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
         destination: 'http://localhost:8000/api/:path*'
       }
     ];
+  },
+  // Add this to ensure auth callbacks work properly
+  async redirects() {
+    return [];
   }
 };
 

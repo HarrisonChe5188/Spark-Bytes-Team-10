@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import FoodCard from "./food-card";
 
 export default function FoodList() {
   const [foods, setFoods] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const supabase = createClient();
   useEffect(() => {
     const fetchFoods = async () => {
       const { data, error } = await supabase.from("food").select("*");
