@@ -7,12 +7,13 @@ import { useRouter } from "next/navigation";
 export default function LogoutButton() {
   const router = useRouter();
   const supabase = createClient();
+  
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut(); // use the imported supabase
     if (error) {
       console.error("Error signing out:", error.message);
     } else {
-      router.push("/auth/login");
+      router.push("/");
     }
   };
 
