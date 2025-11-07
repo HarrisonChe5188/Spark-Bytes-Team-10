@@ -19,8 +19,9 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [error, setError] = useState<string | null>(null);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
-  const supabase = createClient();
+
   const handleOAuthLogin = async () => {
+    const supabase = createClient();
     setIsOAuthLoading(true);
     setError(null);
 
@@ -28,7 +29,7 @@ export function LoginForm({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/feed`,
           queryParams: {
             prompt: 'select_account',
             hd: 'bu.edu',
@@ -41,7 +42,6 @@ export function LoginForm({
       setIsOAuthLoading(false);
     }
   };
-
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
