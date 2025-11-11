@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Host_Grotesk } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
@@ -9,12 +9,12 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Spark Bytes",
-  description: "A platform for sharing available food",
+  title: "Spark!Bytes",
+  description: "Share food with the BU community.",
 };
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const hostGrotesk = Host_Grotesk({
+  variable: "--font-host-grotesk",
   display: "swap",
   subsets: ["latin"],
 });
@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.className} antialiased`}>
+      <body className={`${hostGrotesk.className} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

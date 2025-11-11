@@ -1,6 +1,15 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.getClaims();
+  if (!error && data?.claims) {
+    redirect("/home");
+  }
+
   return (
     <main className="flex-1 flex items-center justify-center px-6 sm:px-12">
       <div className="max-w-2xl mx-auto text-center">

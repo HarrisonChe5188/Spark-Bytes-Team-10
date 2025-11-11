@@ -1,0 +1,13 @@
+export interface Post {
+  id: number;
+  title: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  description?: string;
+  quantity: number;
+  interested_count?: number;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
