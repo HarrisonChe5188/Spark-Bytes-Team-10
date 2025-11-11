@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Link from "next/link";
 
 export default function AboutPage() {
   return (
@@ -26,12 +27,12 @@ export default function AboutPage() {
         </section>
 
         <div>
-          <a
+          <Link
             href="/"
             className="inline-block px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
             ← Back to Home
-          </a>
+          </Link>
         </div>
       </main>
     </div>

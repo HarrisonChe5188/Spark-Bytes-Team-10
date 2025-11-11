@@ -1,7 +1,7 @@
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
-export default function FeedLayout({
+export default function PostLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ export default function FeedLayout({
         <Header />
       </header>
 
-      <main className="flex-1 p-6 sm:p-12">
+      <main className="flex-1 px-6 pt-2 pb-6 sm:px-12 sm:pt-4 sm:pb-2">
         <div className="max-w-4xl mx-auto">
           {children}
         </div>

@@ -1,10 +1,11 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client"; // use the exported client
-import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function LogoutButton() {
+export function LogoutButton() {
   const router = useRouter();
   const supabase = createClient();
   
@@ -18,8 +19,9 @@ export default function LogoutButton() {
   };
 
   return (
-    <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
-      Logout
-    </Button>
+    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+      <LogOut className="mr-2 h-4 w-4" />
+      <span>Logout</span>
+    </DropdownMenuItem>
   );
 }
