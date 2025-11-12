@@ -6,6 +6,7 @@ export interface Post {
   location?: string;
   description?: string;
   quantity: number;
+  quantity_left?: number;
   interested_count?: number;
   user_id?: string;
   created_at?: string;

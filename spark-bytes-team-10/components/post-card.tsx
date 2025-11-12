@@ -3,6 +3,7 @@
 import { Button } from "./ui/button";
 import { Clock, MapPin } from "lucide-react";
 import { Post } from "@/types/post";
+import { useState } from "react";
 
 interface PostCardProps {
   post: Post;
@@ -22,6 +23,37 @@ const estFormatter = new Intl.DateTimeFormat('en-CA', {
 });
 
 export default function PostCard({ post }: PostCardProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isReserved, setIsReserved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleInterested = async () => {
+    if (isLoading || !post.id) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ post_id: post.id }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to reserve food');
+      }
+
+      setIsReserved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const formatPostedTime = (dateString?: string) => {
     if (!dateString) return "Recently";
     const date = new Date(dateString);
@@ -171,12 +203,23 @@ export default function PostCard({ post }: PostCardProps) {
             </p>
           )}
           {!isPostEnded() && (
-            <Button 
-              className="bg-red-600 hover:bg-red-700 text-white font-medium md:ml-auto self-start md:self-auto"
-              size="sm"
-            >
-              I&apos;m interested
-            </Button>
+            <div className="flex flex-col items-start md:items-end gap-1">
+              <Button 
+                onClick={handleInterested}
+                disabled={isLoading || isReserved}
+                className={`font-medium md:ml-auto self-start md:self-auto whitespace-nowrap ${
+                  isReserved 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-red-600 hover:bg-red-700'
+                } text-white`}
+                size="sm"
+              >
+                {isLoading ? 'Reserving...' : isReserved ? '✓ Reserved' : "I'm interested"}
+              </Button>
+              {error && (
+                <p className="text-xs text-red-500">{error}</p>
+              )}
+            </div>
           )}
         </div>
       </div>
