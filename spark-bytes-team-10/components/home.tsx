@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PostCard from "./post-card";
+import PostsFilter, { Filters } from "./posts-filter";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import {
   DropdownMenu,
@@ -11,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Plus } from "lucide-react";
 import { Post } from "@/types/post";
 
 type SortOption = "newest" | "oldest" | "event-early" | "event-late";
@@ -42,7 +43,11 @@ const compareByUpdatedTime = (a: Post, b: Post, ascending: boolean): number => {
   return ascending ? diff : -diff;
 };
 
-const compareByEventTime = (a: Post, b: Post, sortBy: "event-early" | "event-late"): number => {
+const compareByEventTime = (
+  a: Post,
+  b: Post,
+  sortBy: "event-early" | "event-late"
+): number => {
   const hasStartA = !!a.start_time;
   const hasStartB = !!b.start_time;
   const isAscending = sortBy === "event-early";
@@ -71,6 +76,9 @@ export default function Home() {
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("event-early");
+  const [filters, setFilters] = useState<Filters>({});
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [tempFilters, setTempFilters] = useState<Filters>({});
 
   const supabase = createClient();
 
@@ -98,7 +106,55 @@ export default function Home() {
       return activeTab === "active" ? isActive : !isActive;
     });
 
-    const sorted = [...filtered].sort((a, b) => {
+    // Apply client-side filters
+    const filteredByFilters = filtered.filter((post) => {
+      // search in title or description
+      if (filters.search) {
+        const s = filters.search.toLowerCase();
+        const title = (post.title || "").toString().toLowerCase();
+        const desc = (post.description || "").toString().toLowerCase();
+        if (!title.includes(s) && !desc.includes(s)) return false;
+      }
+
+      // event id match
+      if (filters.eventId) {
+        if ((post as any).event_id?.toString() !== filters.eventId)
+          return false;
+      }
+
+      // date range: use start_time if present, otherwise created_at
+      const timeStr = post.start_time || post.created_at;
+      const compareTime = timeStr ? new Date(timeStr) : null;
+      if (filters.dateFrom && compareTime) {
+        // Interpret dateFrom as UTC start of day to avoid timezone drift
+        const from = new Date(`${filters.dateFrom}T00:00:00Z`);
+        if (compareTime < from) return false;
+      }
+      if (filters.dateTo && compareTime) {
+        // Interpret dateTo as UTC end of day
+        const to = new Date(`${filters.dateTo}T23:59:59.999Z`);
+        if (compareTime > to) return false;
+      }
+
+      // location substring
+      if (filters.location) {
+        const loc = (post.location || "").toString().toLowerCase();
+        if (!loc.includes(filters.location.toLowerCase())) return false;
+      }
+
+      // minimum availability
+      if (
+        filters.minAvailable &&
+        typeof (post as any).quantity_left !== "undefined"
+      ) {
+        if ((post as any).quantity_left < (filters.minAvailable || 0))
+          return false;
+      }
+
+      return true;
+    });
+
+    const sorted = [...filteredByFilters].sort((a, b) => {
       if (sortBy === "newest" || sortBy === "oldest") {
         return compareByUpdatedTime(a, b, sortBy === "oldest");
       }
@@ -106,7 +162,7 @@ export default function Home() {
     });
 
     setFilteredPosts(sorted);
-  }, [activeTab, posts, sortBy]);
+  }, [activeTab, posts, sortBy, filters]);
 
   useEffect(() => {
     fetchPosts();
@@ -120,7 +176,7 @@ export default function Home() {
     const handlePostCreated = () => {
       fetchPosts();
     };
-    
+
     window.addEventListener("postCreated", handlePostCreated);
     return () => {
       window.removeEventListener("postCreated", handlePostCreated);
@@ -132,10 +188,14 @@ export default function Home() {
       {/* Header with Tabs and Sort */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="w-auto">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as TabValue)}
+            className="w-auto"
+          >
             <TabsList className="bg-transparent p-0 h-auto gap-1">
-              <TabsTrigger 
-                value="active" 
+              <TabsTrigger
+                value="active"
                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   activeTab === "active"
                     ? "border border-input hover:bg-accent hover:text-accent-foreground"
@@ -144,8 +204,8 @@ export default function Home() {
               >
                 Active
               </TabsTrigger>
-              <TabsTrigger 
-                value="ended" 
+              <TabsTrigger
+                value="ended"
                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   activeTab === "ended"
                     ? "border border-input hover:bg-accent hover:text-accent-foreground"
@@ -158,41 +218,96 @@ export default function Home() {
           </Tabs>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <ArrowUpDown className="h-4 w-4" />
-              Sort by
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => setSortBy("event-early")}
-              className="cursor-pointer"
-            >
-              Earliest Event
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setSortBy("event-late")}
-              className="cursor-pointer"
-            >
-              Latest Event
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setSortBy("newest")}
-              className="cursor-pointer"
-            >
-              Newest
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setSortBy("oldest")}
-              className="cursor-pointer"
-            >
-              Oldest
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <ArrowUpDown className="h-4 w-4" />
+                Sort by
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => setSortBy("event-early")}
+                className="cursor-pointer"
+              >
+                Earliest Event
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSortBy("event-late")}
+                className="cursor-pointer"
+              >
+                Latest Event
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSortBy("newest")}
+                className="cursor-pointer"
+              >
+                Newest
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSortBy("oldest")}
+                className="cursor-pointer"
+              >
+                Oldest
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Filter Modal trigger */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              setTempFilters(filters);
+              setIsFilterOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Filter
+          </Button>
+        </div>
       </div>
+
+      {/* Modal for Filters */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsFilterOpen(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-900 rounded-md shadow-lg w-full max-w-2xl mx-4">
+            <div className="p-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Filter posts
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Set filter criteria and click Apply
+              </p>
+              <div className="mt-4">
+                <PostsFilter value={tempFilters} onChange={setTempFilters} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800">
+              <Button variant="ghost" onClick={() => setTempFilters({})}>
+                Reset
+              </Button>
+              <Button variant="outline" onClick={() => setIsFilterOpen(false)}>
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  setFilters(tempFilters);
+                  setIsFilterOpen(false);
+                }}
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       {loading ? (
