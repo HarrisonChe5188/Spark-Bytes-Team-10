@@ -3,7 +3,7 @@
 import { Button } from "./ui/button";
 import { Clock, MapPin } from "lucide-react";
 import { Post } from "@/types/post";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface PostCardProps {
   post: Post;
@@ -26,6 +26,29 @@ export default function PostCard({ post }: PostCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isReserved, setIsReserved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if user has already reserved this post on component mount
+  useEffect(() => {
+    const checkReservationStatus = async () => {
+      try {
+        const response = await fetch("/api/reservations");
+        if (!response.ok) return; // Not authenticated or error
+
+        const data = await response.json();
+        const reservations = data.reservations || [];
+        // Check if this post is in the user's reservations
+        const isAlreadyReserved = reservations.some(
+          (reservation: any) => reservation.posts?.id === post.id
+        );
+        setIsReserved(isAlreadyReserved);
+      } catch (err) {
+        console.error("Failed to check reservation status:", err);
+        // Silently fail - don't show error on initial load
+      }
+    };
+
+    checkReservationStatus();
+  }, [post.id]);
 
   const handleInterested = async () => {
     if (isLoading || !post.id) return;
