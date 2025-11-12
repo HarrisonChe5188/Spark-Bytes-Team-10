@@ -22,6 +22,12 @@ export function Header() {
           >
             {isPostPage ? "Home" : "Post"}
           </button>
+          <button
+            onClick={() => router.push("/reservations")}
+            className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium"
+          >
+            My Reservations
+          </button>
           <ProfileDropdown>
             <LogoutButton />
           </ProfileDropdown>
