@@ -5,6 +5,7 @@ export interface Post {
   end_time?: string;
   location?: string;
   description?: string;
+  image_path?: string | null;
   quantity: number;
   quantity_left?: number;
   interested_count?: number;

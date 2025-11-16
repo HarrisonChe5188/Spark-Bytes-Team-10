@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { Clock, MapPin } from "lucide-react";
 import { Post } from "@/types/post";
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 interface PostCardProps {
   post: Post;
@@ -49,6 +50,19 @@ export default function PostCard({ post }: PostCardProps) {
 
     checkReservationStatus();
   }, [post.id]);
+
+  // Prepare image URL if provided (public bucket flow)
+  const supabase = createClient();
+  let imageUrl: string | null = null;
+  try {
+    if (post.image_path) {
+      const { data } = supabase.storage.from('food_pictures').getPublicUrl(post.image_path);
+      imageUrl = data?.publicUrl || null;
+    }
+  } catch (err) {
+    // ignore
+    imageUrl = null;
+  }
 
   const handleInterested = async () => {
     if (isLoading || !post.id) return;
@@ -185,65 +199,76 @@ export default function PostCard({ post }: PostCardProps) {
 
   return (
     <div className="p-5 border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-800 transition-all duration-200">
-      <div className="flex items-start justify-between mb-3">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 pr-4">
-          {post.title}
-        </h2>
-        {post.created_at && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-            {formatPostedTime(post.created_at)}
-          </p>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <Clock size={16} className="text-gray-400 dark:text-gray-500" />
-          <span>
-            {isPostEnded() && post.created_at
-              ? formatCreatedDate(post.created_at)
-              : post.start_time && post.end_time
-              ? formatTimeRange(post.start_time, post.end_time)
-              : post.start_time
-              ? formatDateTime(post.start_time)
-              : post.end_time
-              ? formatNowToEndTime(post.end_time)
-              : "Now"}
-          </span>
-        </div>
-        
-        {post.location && (
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <MapPin size={16} className="text-gray-400 dark:text-gray-500" />
-            <span>{post.location}</span>
+      <div className="flex gap-4">
+        {/* Image on the left */}
+        {imageUrl && (
+          <div className="flex-shrink-0">
+            <img src={imageUrl} alt={post.title || 'image'} className="w-32 h-32 object-cover rounded-md" />
           </div>
         )}
-        
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 pt-1">
-          {post.description && (
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed flex-1">
-              {post.description}
-            </p>
-          )}
-          {!isPostEnded() && (
-            <div className="flex flex-col items-start md:items-end gap-1">
-              <Button 
-                onClick={handleInterested}
-                disabled={isLoading || isReserved}
-                className={`font-medium md:ml-auto self-start md:self-auto whitespace-nowrap ${
-                  isReserved 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-red-600 hover:bg-red-700'
-                } text-white`}
-                size="sm"
-              >
-                {isLoading ? 'Reserving...' : isReserved ? '✓ Reserved' : "I'm interested"}
-              </Button>
-              {error && (
-                <p className="text-xs text-red-500">{error}</p>
+        {/* Content on the right */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex items-start justify-between mb-3">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 pr-4">
+              {post.title}
+            </h2>
+            {post.created_at && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                {formatPostedTime(post.created_at)}
+              </p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <Clock size={16} className="text-gray-400 dark:text-gray-500" />
+              <span>
+                {isPostEnded() && post.created_at
+                  ? formatCreatedDate(post.created_at)
+                  : post.start_time && post.end_time
+                  ? formatTimeRange(post.start_time, post.end_time)
+                  : post.start_time
+                  ? formatDateTime(post.start_time)
+                  : post.end_time
+                  ? formatNowToEndTime(post.end_time)
+                  : "Now"}
+              </span>
+            </div>
+            
+            {post.location && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <MapPin size={16} className="text-gray-400 dark:text-gray-500" />
+                <span>{post.location}</span>
+              </div>
+            )}
+            
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 pt-1">
+              {post.description && (
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed flex-1">
+                  {post.description}
+                </p>
+              )}
+              {!isPostEnded() && (
+                <div className="flex flex-col items-start md:items-end gap-1">
+                  <Button 
+                    onClick={handleInterested}
+                    disabled={isLoading || isReserved}
+                    className={`font-medium md:ml-auto self-start md:self-auto whitespace-nowrap ${
+                      isReserved 
+                        ? 'bg-green-600 hover:bg-green-700' 
+                        : 'bg-red-600 hover:bg-red-700'
+                    } text-white`}
+                    size="sm"
+                  >
+                    {isLoading ? 'Reserving...' : isReserved ? '✓ Reserved' : "I'm interested"}
+                  </Button>
+                  {error && (
+                    <p className="text-xs text-red-500">{error}</p>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

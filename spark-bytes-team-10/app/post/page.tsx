@@ -46,6 +46,8 @@ function PostPageContent() {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState<"how-it-works" | "form">("how-it-works");
   const [title, setTitle] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -179,19 +181,26 @@ function PostPageContent() {
       const startDateTime = startTime ? convertESTToUTC(selectedDate, startTime) : null;
       const endDateTime = convertESTToUTC(selectedDate, endTime);
 
-      const { error } = await supabase.from("posts").insert({
-        title: title.trim(),
-        start_time: startDateTime,
-        end_time: endDateTime,
-        location: location.trim() || null,
-        description: description.trim() || null,
-        quantity: Number(quantity) || 1,
+      // Use server API endpoint to create post with image
+      const formData = new FormData();
+      formData.append('title', title.trim());
+      formData.append('location', location.trim() || '');
+      formData.append('description', description.trim() || '');
+      formData.append('quantity', String(Number(quantity) || 1));
+      if (startDateTime) formData.append('start_time', startDateTime);
+      formData.append('end_time', endDateTime);
+      if (selectedFile) {
+        formData.append('image', selectedFile);
+      }
+
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        body: formData,
       });
 
-      if (error) {
-        setFieldErrors({ submit: error.message });
-        setPostLoading(false);
-        return;
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to create post');
       }
 
       window.dispatchEvent(new CustomEvent("postCreated"));
@@ -420,6 +429,24 @@ function PostPageContent() {
                   {description.length}/{CHARACTER_LIMITS.description}
                 </p>
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Image (optional)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setSelectedFile(file);
+                  if (file) setPreviewUrl(URL.createObjectURL(file));
+                  else setPreviewUrl(null);
+                }}
+              />
+              {previewUrl && (
+                <img src={previewUrl} alt="preview" className="mt-2 w-full h-40 object-cover rounded" />
+              )}
             </div>
             <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
               <Checkbox

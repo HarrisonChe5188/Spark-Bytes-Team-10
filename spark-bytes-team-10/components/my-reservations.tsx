@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface ReservedFood {
   id: string;
@@ -16,7 +17,26 @@ interface ReservedFood {
     quantity_left: number;
     total_quantity: number;
     created_at?: string;
+    image_path?: string | null;
   };
+}
+
+// Helper component to render image with public URL
+function ReservationImage({ imagePath, title }: { imagePath: string; title: string }) {
+  const supabase = createClient();
+  let imageUrl: string | null = null;
+  try {
+    const { data } = supabase.storage.from('food_pictures').getPublicUrl(imagePath);
+    imageUrl = data?.publicUrl || null;
+  } catch (err) {
+    imageUrl = null;
+  }
+
+  if (!imageUrl) return null;
+
+  return (
+    <img src={imageUrl} alt={title} className="w-32 h-32 object-cover rounded-md" />
+  );
 }
 
 export default function MyReservations() {
@@ -111,41 +131,51 @@ export default function MyReservations() {
           </CardHeader>
           
           <CardContent>
-            <div className="space-y-3">
-              {reservation.posts.description && (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {reservation.posts.description}
-                </p>
+            <div className="flex gap-4">
+              {/* Image */}
+              {reservation.posts.image_path && (
+                <div className="flex-shrink-0">
+                  <ReservationImage imagePath={reservation.posts.image_path} title={reservation.posts.title} />
+                </div>
               )}
               
-              <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Available</p>
-                    <p className="font-semibold">
-                      {reservation.posts.quantity_left}/{reservation.posts.total_quantity}
-                    </p>
-                  </div>
-                  <div className="w-24 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
-                      style={{ 
-                        width: `${(reservation.posts.quantity_left / reservation.posts.total_quantity) * 100}%`
-                      }}
-                    ></div>
-                  </div>
-                </div>
+              {/* Content */}
+              <div className="flex-1 space-y-3">
+                {reservation.posts.description && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {reservation.posts.description}
+                  </p>
+                )}
                 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleCancelReservation(reservation.id)}
-                  disabled={cancelingId === reservation.id}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <Trash2 size={16} />
-                  {cancelingId === reservation.id ? "Canceling..." : "Cancel"}
-                </Button>
+                <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Available</p>
+                      <p className="font-semibold">
+                        {reservation.posts.quantity_left}/{reservation.posts.total_quantity}
+                      </p>
+                    </div>
+                    <div className="w-24 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full" 
+                        style={{ 
+                          width: `${(reservation.posts.quantity_left / reservation.posts.total_quantity) * 100}%`
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCancelReservation(reservation.id)}
+                    disabled={cancelingId === reservation.id}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <Trash2 size={16} />
+                    {cancelingId === reservation.id ? "Canceling..." : "Cancel"}
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>

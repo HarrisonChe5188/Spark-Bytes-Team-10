@@ -138,7 +138,8 @@ export async function GET(request: Request) {
           description,
           quantity_left,
           total_quantity,
-          created_at
+          created_at,
+          image_path
         )
       `)
       .eq('user_id', user.id)
