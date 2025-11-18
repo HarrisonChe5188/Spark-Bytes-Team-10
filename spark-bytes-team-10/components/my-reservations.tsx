@@ -201,13 +201,10 @@ export default function MyReservations() {
     );
   }
 
-  const activeReservations = reservations.filter((reservation) => !isPostEnded(reservation.posts));
-  const endedReservations = reservations.filter((reservation) => isPostEnded(reservation.posts));
-
   if (reservations.length === 0) {
     return (
       <div className="text-center p-8 text-gray-500">
-        <p>There's nothing here yet.</p>
+        <p>There&apos;s nothing here yet.</p>
       </div>
     );
   }
@@ -220,7 +217,7 @@ export default function MyReservations() {
         const { data } = supabase.storage.from('food_pictures').getPublicUrl(reservation.posts.image_path);
         imageUrl = data?.publicUrl || null;
       }
-    } catch (err) {
+    } catch {
       imageUrl = null;
     }
 
@@ -229,14 +226,14 @@ export default function MyReservations() {
         key={reservation.id} 
         className={`p-5 border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 transition-all duration-200 ${isEnded ? 'opacity-60' : 'hover:border-red-300 dark:hover:border-red-800'}`}
       >
-        <div className="flex gap-4">
-          {/* Image on the left */}
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Image - only shown on mobile */}
           {imageUrl && (
-            <div className="flex-shrink-0">
-              <img src={imageUrl} alt={reservation.posts.title || 'image'} className="w-32 h-32 object-cover rounded-md" />
+            <div className="flex-shrink-0 w-full md:hidden">
+              <img src={imageUrl} alt={reservation.posts.title || 'image'} className="w-full h-48 object-cover rounded-md" />
             </div>
           )}
-          {/* Content on the right */}
+          {/* Content */}
           <div className="flex-1 flex flex-col">
             <div className="flex items-start justify-between mb-3">
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 pr-4">
@@ -278,16 +275,16 @@ export default function MyReservations() {
                     {reservation.posts.description}
                   </p>
                 )}
-                <div className="flex flex-col items-start md:items-end gap-1">
+                <div className="flex flex-col items-end gap-1">
                   {isEnded ? (
-                    <span className="text-sm text-gray-500 dark:text-gray-400 font-medium md:ml-auto self-start md:self-auto whitespace-nowrap">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
                       Ended
                     </span>
                   ) : (
                     <button
                       onClick={() => handleCancelReservation(reservation.id)}
                       disabled={cancelingId === reservation.id}
-                      className="text-sm text-gray-500 dark:text-gray-400 font-medium md:ml-auto self-start md:self-auto whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {cancelingId === reservation.id ? "Canceling..." : "Cancel"}
                     </button>
@@ -310,7 +307,7 @@ export default function MyReservations() {
 
       {reservations.length === 0 && (
         <div className="text-center p-8 text-gray-500">
-          <p>There's nothing here yet.</p>
+          <p>There&apos;s nothing here yet.</p>
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 interface PostCardProps {
   post: Post;
   isReserved?: boolean;
+  currentUserId?: string | null;
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -24,7 +25,7 @@ const estFormatter = new Intl.DateTimeFormat('en-CA', {
   hour12: false
 });
 
-export default function PostCard({ post, isReserved: initialIsReserved = false }: PostCardProps) {
+export default function PostCard({ post, isReserved: initialIsReserved = false, currentUserId = null }: PostCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isReserved, setIsReserved] = useState(initialIsReserved);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export default function PostCard({ post, isReserved: initialIsReserved = false }
       const { data } = supabase.storage.from('food_pictures').getPublicUrl(post.image_path);
       imageUrl = data?.publicUrl || null;
     }
-  } catch (err) {
+  } catch {
     // ignore
     imageUrl = null;
   }
@@ -74,6 +75,17 @@ export default function PostCard({ post, isReserved: initialIsReserved = false }
       setIsLoading(false);
     }
   };
+
+  const handleEdit = () => {
+    // Dummy handler for now
+    console.log('Edit clicked for post:', post.id);
+  };
+
+  const handleDelete = () => {
+    // Dummy handler for now
+    console.log('Delete clicked for post:', post.id);
+  };
+
   const formatPostedTime = (dateString?: string) => {
     if (!dateString) return "Recently";
     const date = new Date(dateString);
@@ -182,14 +194,14 @@ export default function PostCard({ post, isReserved: initialIsReserved = false }
 
   return (
     <div className="p-5 border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-800 transition-all duration-200">
-      <div className="flex gap-4">
-        {/* Image on the left */}
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Image - only shown on mobile */}
         {imageUrl && (
-          <div className="flex-shrink-0">
-            <img src={imageUrl} alt={post.title || 'image'} className="w-32 h-32 object-cover rounded-md" />
+          <div className="flex-shrink-0 w-full md:hidden">
+            <img src={imageUrl} alt={post.title || 'image'} className="w-full h-48 object-cover rounded-md" />
           </div>
         )}
-        {/* Content on the right */}
+        {/* Content */}
         <div className="flex-1 flex flex-col">
           <div className="flex items-start justify-between mb-3">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 pr-4">
@@ -231,23 +243,48 @@ export default function PostCard({ post, isReserved: initialIsReserved = false }
                   {post.description}
                 </p>
               )}
-              {!isPostEnded() && (
-                <div className="flex flex-col items-start md:items-end gap-1">
-                  <Button 
-                    onClick={handleInterested}
-                    disabled={isLoading || isReserved}
-                    className={`font-medium md:ml-auto self-start md:self-auto whitespace-nowrap ${
-                      isReserved 
-                        ? 'bg-green-600 hover:bg-green-700' 
-                        : 'bg-red-600 hover:bg-red-700'
-                    } text-white`}
-                    size="sm"
-                  >
-                    {isLoading ? 'Reserving...' : isReserved ? '✓ Reserved' : "I'm interested"}
-                  </Button>
-                  {error && (
-                    <p className="text-xs text-red-500">{error}</p>
+              {!isPostEnded() ? (
+                <div className="flex flex-col items-end gap-1">
+                  {currentUserId === post.user_id ? (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleEdit}
+                        className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Button 
+                        onClick={handleInterested}
+                        disabled={isLoading || isReserved}
+                        className={`font-medium whitespace-nowrap ${
+                          isReserved 
+                            ? 'bg-green-600 hover:bg-green-700' 
+                            : 'bg-red-600 hover:bg-red-700'
+                        } text-white`}
+                        size="sm"
+                      >
+                        {isLoading ? 'Reserving...' : isReserved ? '✓ Reserved' : "I'm interested"}
+                      </Button>
+                      {error && (
+                        <p className="text-xs text-red-500">{error}</p>
+                      )}
+                    </>
                   )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                    Ended
+                  </span>
                 </div>
               )}
             </div>

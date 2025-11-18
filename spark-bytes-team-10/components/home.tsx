@@ -80,6 +80,7 @@ export default function Home() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [tempFilters, setTempFilters] = useState<Filters>({});
   const [reservedPostIds, setReservedPostIds] = useState<Set<number>>(new Set());
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -169,8 +170,8 @@ export default function Home() {
     const fetchData = async () => {
       setLoading(true);
       
-      // Fetch both in parallel
-      const [postsResult, reservationsResult] = await Promise.allSettled([
+      // Fetch posts, reservations, and current user in parallel
+      const [postsResult, reservationsResult, userResult] = await Promise.allSettled([
         (async () => {
           const { data, error } = await supabase.from("posts").select("*");
           if (error) {
@@ -195,6 +196,10 @@ export default function Home() {
             return [];
           }
         })(),
+        (async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          return user?.id || null;
+        })(),
       ]);
 
       // Set posts
@@ -212,6 +217,11 @@ export default function Home() {
         );
         setReservedPostIds(reservedIds);
       }
+
+      // Set current user ID
+      if (userResult.status === "fulfilled") {
+        setCurrentUserId(userResult.value);
+      }
       
       setLoading(false);
     };
@@ -226,11 +236,15 @@ export default function Home() {
   useEffect(() => {
     const handlePostCreated = async () => {
       await fetchPosts();
-      // Also refresh reservations when a new post is created
+      // Also refresh reservations and user when a new post is created
       try {
-        const response = await fetch("/api/reservations");
-        if (response.ok) {
-          const data = await response.json();
+        const [reservationsResponse, userData] = await Promise.allSettled([
+          fetch("/api/reservations").then(res => res.ok ? res.json() : { reservations: [] }),
+          supabase.auth.getUser(),
+        ]);
+
+        if (reservationsResponse.status === "fulfilled") {
+          const data = reservationsResponse.value;
           const reservations = data.reservations || [];
           const reservedIds = new Set<number>(
             reservations
@@ -239,15 +253,20 @@ export default function Home() {
           );
           setReservedPostIds(reservedIds);
         }
+
+        if (userData.status === "fulfilled") {
+          const { data: { user } } = userData.value;
+          setCurrentUserId(user?.id || null);
+        }
       } catch (err) {
-        console.error("Failed to refresh reservations:", err);
+        console.error("Failed to refresh data:", err);
       }
     };
     window.addEventListener("postCreated", handlePostCreated);
     return () => {
       window.removeEventListener("postCreated", handlePostCreated);
     };
-  }, [fetchPosts]);
+  }, [fetchPosts, supabase]);
 
   return (
     <div className="w-full">
@@ -385,7 +404,7 @@ export default function Home() {
       ) : (
         <div className="space-y-4">
           {filteredPosts.map((post) => (
-            <PostCard key={post.id} post={post} isReserved={reservedPostIds.has(post.id)} />
+            <PostCard key={post.id} post={post} isReserved={reservedPostIds.has(post.id)} currentUserId={currentUserId} />
           ))}
         </div>
       )}
