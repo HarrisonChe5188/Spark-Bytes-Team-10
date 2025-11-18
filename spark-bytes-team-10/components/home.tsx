@@ -79,6 +79,7 @@ export default function Home() {
   const [filters, setFilters] = useState<Filters>({});
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [tempFilters, setTempFilters] = useState<Filters>({});
+  const [reservedPostIds, setReservedPostIds] = useState<Set<number>>(new Set());
 
   const supabase = createClient();
 
@@ -96,7 +97,6 @@ export default function Home() {
     })) as Post[];
 
     setPosts(allPosts);
-    setLoading(false);
   }, [supabase]);
 
   const filterAndSortPosts = useCallback(() => {
@@ -118,7 +118,7 @@ export default function Home() {
 
       // event id match
       if (filters.eventId) {
-        if ((post as any).event_id?.toString() !== filters.eventId)
+        if ((post as Post & { event_id?: number }).event_id?.toString() !== filters.eventId)
           return false;
       }
 
@@ -145,9 +145,9 @@ export default function Home() {
       // minimum availability
       if (
         filters.minAvailable &&
-        typeof (post as any).quantity_left !== "undefined"
+        typeof post.quantity_left !== "undefined"
       ) {
-        if ((post as any).quantity_left < (filters.minAvailable || 0))
+        if ((post.quantity_left || 0) < (filters.minAvailable || 0))
           return false;
       }
 
@@ -164,17 +164,84 @@ export default function Home() {
     setFilteredPosts(sorted);
   }, [activeTab, posts, sortBy, filters]);
 
+  // Fetch posts and reservations together on mount
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    const fetchData = async () => {
+      setLoading(true);
+      
+      // Fetch both in parallel
+      const [postsResult, reservationsResult] = await Promise.allSettled([
+        (async () => {
+          const { data, error } = await supabase.from("posts").select("*");
+          if (error) {
+            console.error("Error fetching posts:", error);
+            return [];
+          }
+          return (data || []).map((item: Post) => ({
+            ...item,
+            location: item.location || "Location TBD",
+            description: item.description || "No description available.",
+          })) as Post[];
+        })(),
+        (async () => {
+          try {
+            const response = await fetch("/api/reservations");
+            if (!response.ok) return []; // Not authenticated or error
+
+            const data = await response.json();
+            return data.reservations || [];
+          } catch (err) {
+            console.error("Failed to fetch reservations:", err);
+            return [];
+          }
+        })(),
+      ]);
+
+      // Set posts
+      if (postsResult.status === "fulfilled") {
+        setPosts(postsResult.value);
+      }
+
+      // Set reservations
+      if (reservationsResult.status === "fulfilled") {
+        const reservations = reservationsResult.value;
+        const reservedIds = new Set<number>(
+          reservations
+            .map((reservation: { posts?: { id?: number } }) => reservation.posts?.id)
+            .filter((id: number | undefined): id is number => id !== undefined)
+        );
+        setReservedPostIds(reservedIds);
+      }
+      
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [supabase]);
 
   useEffect(() => {
     filterAndSortPosts();
   }, [filterAndSortPosts]);
 
   useEffect(() => {
-    const handlePostCreated = () => {
-      fetchPosts();
+    const handlePostCreated = async () => {
+      await fetchPosts();
+      // Also refresh reservations when a new post is created
+      try {
+        const response = await fetch("/api/reservations");
+        if (response.ok) {
+          const data = await response.json();
+          const reservations = data.reservations || [];
+          const reservedIds = new Set<number>(
+            reservations
+              .map((reservation: { posts?: { id?: number } }) => reservation.posts?.id)
+              .filter((id: number | undefined): id is number => id !== undefined)
+          );
+          setReservedPostIds(reservedIds);
+        }
+      } catch (err) {
+        console.error("Failed to refresh reservations:", err);
+      }
     };
     window.addEventListener("postCreated", handlePostCreated);
     return () => {
@@ -318,7 +385,7 @@ export default function Home() {
       ) : (
         <div className="space-y-4">
           {filteredPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} isReserved={reservedPostIds.has(post.id)} />
           ))}
         </div>
       )}

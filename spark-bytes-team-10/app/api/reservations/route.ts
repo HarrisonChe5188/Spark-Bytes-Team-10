@@ -139,7 +139,10 @@ export async function GET(request: Request) {
           quantity_left,
           total_quantity,
           created_at,
-          image_path
+          image_path,
+          location,
+          start_time,
+          end_time
         )
       `)
       .eq('user_id', user.id)

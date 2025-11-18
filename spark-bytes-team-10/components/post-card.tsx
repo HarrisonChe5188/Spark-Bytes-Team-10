@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 
 interface PostCardProps {
   post: Post;
+  isReserved?: boolean;
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -23,33 +24,15 @@ const estFormatter = new Intl.DateTimeFormat('en-CA', {
   hour12: false
 });
 
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, isReserved: initialIsReserved = false }: PostCardProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isReserved, setIsReserved] = useState(false);
+  const [isReserved, setIsReserved] = useState(initialIsReserved);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if user has already reserved this post on component mount
+  // Update isReserved when prop changes
   useEffect(() => {
-    const checkReservationStatus = async () => {
-      try {
-        const response = await fetch("/api/reservations");
-        if (!response.ok) return; // Not authenticated or error
-
-        const data = await response.json();
-        const reservations = data.reservations || [];
-        // Check if this post is in the user's reservations
-        const isAlreadyReserved = reservations.some(
-          (reservation: any) => reservation.posts?.id === post.id
-        );
-        setIsReserved(isAlreadyReserved);
-      } catch (err) {
-        console.error("Failed to check reservation status:", err);
-        // Silently fail - don't show error on initial load
-      }
-    };
-
-    checkReservationStatus();
-  }, [post.id]);
+    setIsReserved(initialIsReserved);
+  }, [initialIsReserved]);
 
   // Prepare image URL if provided (public bucket flow)
   const supabase = createClient();
