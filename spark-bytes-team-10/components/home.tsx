@@ -142,7 +142,12 @@ export default function Home() {
         const loc = (post.location || "").toString().toLowerCase();
         if (!loc.includes(filters.location.toLowerCase())) return false;
       }
-
+      // Campus filter - check if location contains the campus name
+      if (filters.campus) {
+        const loc = (post.location || "").toString().toLowerCase();
+        const campusFilter = filters.campus.toLowerCase();
+        if (!loc.includes(campusFilter)) return false;
+      }
       // minimum availability
       if (
         filters.minAvailable &&

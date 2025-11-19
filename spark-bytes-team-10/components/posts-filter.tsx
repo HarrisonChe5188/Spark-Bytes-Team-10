@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, MapPin } from "lucide-react";
 
 export type Filters = {
   search?: string;
@@ -9,6 +9,7 @@ export type Filters = {
   dateFrom?: string;
   dateTo?: string;
   location?: string;
+  campus?: string;
   minAvailable?: number;
 };
 
@@ -24,6 +25,7 @@ export default function PostsFilter({
   const [dateFrom, setDateFrom] = useState(value.dateFrom || "");
   const [dateTo, setDateTo] = useState(value.dateTo || "");
   const [location, setLocation] = useState(value.location || "");
+  const [campus, setCampus] = useState(value.campus || "");
   const [minAvailable, setMinAvailable] = useState<number>(value.minAvailable ?? 0);
 
   // Keep local state in sync when parent `value` changes (e.g. Reset)
@@ -33,21 +35,22 @@ export default function PostsFilter({
     setDateFrom(value.dateFrom || "");
     setDateTo(value.dateTo || "");
     setLocation(value.location || "");
+    setCampus(value.campus || "");
     setMinAvailable(value.minAvailable ?? 0);
   }, [value]);
 
   // debounce search input (use current local state to avoid stale `value` prop)
     useEffect(() => {
       const t = setTimeout(() =>
-        onChange({ search, eventId, dateFrom, dateTo, location, minAvailable }),
+        onChange({ search, eventId, dateFrom, dateTo, location, campus, minAvailable }),
       300);
       return () => clearTimeout(t);
     }, [search]);
 
   // immediate updates for other fields (send full filter shape)
   useEffect(() => {
-    onChange({ search, eventId, dateFrom, dateTo, location, minAvailable });
-  }, [eventId, dateFrom, dateTo, location, minAvailable]);
+    onChange({ search, eventId, dateFrom, dateTo, location, campus, minAvailable });
+  }, [eventId, dateFrom, dateTo, location, campus, minAvailable]);
 
   return (
     <div className="mb-4 p-3 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
@@ -67,12 +70,28 @@ export default function PostsFilter({
             onChangeTo={setDateTo}
           />
         </div>
+        
+        {/* Campus Filter Dropdown */}
+        <div className="relative">
+          <select
+            className="w-full px-3 py-2 border rounded bg-gray-50 dark:bg-gray-800 appearance-none pr-8"
+            value={campus}
+            onChange={(e) => setCampus(e.target.value)}
+          >
+            <option value="">All Campuses</option>
+            <option value="South Campus">South Campus</option>
+            <option value="North Campus">North Campus</option>
+            <option value="East Campus">East Campus</option>
+            <option value="West Campus">West Campus</option>
+          </select>
+          <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
         <input
           className="w-full px-3 py-2 border rounded bg-gray-50 dark:bg-gray-800"
-          placeholder="Location"
+          placeholder="Specific location (e.g., GSU)"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
         />

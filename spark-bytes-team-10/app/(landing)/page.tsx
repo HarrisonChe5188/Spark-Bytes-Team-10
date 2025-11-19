@@ -188,10 +188,10 @@ export default async function Home() {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-start gap-2">
                 <MessageCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                Is the food safe to eat?
+                Allergies?
               </h3>
               <p className="text-gray-600 dark:text-gray-400 ml-7">
-                Hosts are responsible for food safety. We encourage everyone to follow proper food handling guidelines and use their best judgment. Only share and accept food you feel comfortable with.
+              Allergens will be listed. We encourage everyone to follow proper food handling guidelines and use their best judgment.
               </p>
             </div>
 
