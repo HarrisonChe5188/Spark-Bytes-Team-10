@@ -1,0 +1,34 @@
+import ProfileForm from "@/components/profile-form";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function ProfilePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <p>Please sign in to edit your profile.</p>
+      </div>
+    );
+  }
+
+  const { data: profileData } = await supabase
+    .from("user_info")
+    .select("nickname, image_url")
+    .eq("id", user.id)
+    .single();
+
+  return (
+    <main className="max-w-3xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold mb-4">Edit Profile</h1>
+      <ProfileForm
+        userId={user.id}
+        initialNickname={profileData?.nickname ?? ""}
+        initialAvatarUrl={profileData?.image_url ?? null}
+      />
+    </main>
+  );
+}
