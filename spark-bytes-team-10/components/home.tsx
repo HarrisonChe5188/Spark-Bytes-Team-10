@@ -267,9 +267,29 @@ export default function Home() {
         console.error("Failed to refresh data:", err);
       }
     };
+
+    const handlePostUpdated = async () => {
+      await fetchPosts();
+      // Also refresh reservations when a post is updated or deleted
+      try {
+        const reservationsResponse = await fetch("/api/reservations").then(res => res.ok ? res.json() : { reservations: [] });
+        const reservations = reservationsResponse.reservations || [];
+        const reservedIds = new Set<number>(
+          reservations
+            .map((reservation: { posts?: { id?: number } }) => reservation.posts?.id)
+            .filter((id: number | undefined): id is number => id !== undefined)
+        );
+        setReservedPostIds(reservedIds);
+      } catch (err) {
+        console.error("Failed to refresh data:", err);
+      }
+    };
+
     window.addEventListener("postCreated", handlePostCreated);
+    window.addEventListener("postUpdated", handlePostUpdated);
     return () => {
       window.removeEventListener("postCreated", handlePostCreated);
+      window.removeEventListener("postUpdated", handlePostUpdated);
     };
   }, [fetchPosts, supabase]);
 
