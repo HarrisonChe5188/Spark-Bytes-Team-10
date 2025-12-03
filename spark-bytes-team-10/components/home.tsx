@@ -81,6 +81,7 @@ export default function Home() {
   const [tempFilters, setTempFilters] = useState<Filters>({});
   const [reservedPostIds, setReservedPostIds] = useState<Set<number>>(new Set());
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [authorNicknames, setAuthorNicknames] = useState<Map<string, string | null>>(new Map());
 
   const supabase = createClient();
 
@@ -98,6 +99,29 @@ export default function Home() {
     })) as Post[];
 
     setPosts(allPosts);
+
+    // Fetch author nicknames
+    const userIds = [...new Set(allPosts.map((p: Post) => p.user_id).filter(Boolean))] as string[];
+    if (userIds.length > 0) {
+      const { data: userInfos } = await supabase
+        .from('userinfo')
+        .select('id, nickname')
+        .in('id', userIds);
+      
+      const nicknamesMap = new Map<string, string | null>();
+      userInfos?.forEach((info) => {
+        nicknamesMap.set(info.id, info.nickname || null);
+      });
+      
+      // Set null for users not found
+      userIds.forEach((id) => {
+        if (!nicknamesMap.has(id)) {
+          nicknamesMap.set(id, null);
+        }
+      });
+      
+      setAuthorNicknames(nicknamesMap);
+    }
   }, [supabase]);
 
   const filterAndSortPosts = useCallback(() => {
@@ -175,25 +199,26 @@ export default function Home() {
     const fetchData = async () => {
       setLoading(true);
       
-      // Fetch posts, reservations, and current user in parallel
-      const [postsResult, reservationsResult, userResult] = await Promise.allSettled([
-        (async () => {
-          const { data, error } = await supabase.from("posts").select("*");
-          if (error) {
-            console.error("Error fetching posts:", error);
-            return [];
-          }
-          return (data || []).map((item: Post) => ({
+      // Fetch posts first (needed to determine which user IDs to fetch)
+      const { data: postsData, error: postsError } = await supabase.from("posts").select("*");
+      const posts = postsError 
+        ? []
+        : (postsData || []).map((item: Post) => ({
             ...item,
             location: item.location || "Location TBD",
             description: item.description || "No description available.",
           })) as Post[];
-        })(),
+
+      setPosts(posts);
+
+      // Extract user IDs and fetch everything else in parallel
+      const userIds = [...new Set(posts.map((p: Post) => p.user_id).filter(Boolean))] as string[];
+      
+      const [reservationsResult, userResult, nicknamesResult] = await Promise.allSettled([
         (async () => {
           try {
             const response = await fetch("/api/reservations");
-            if (!response.ok) return []; // Not authenticated or error
-
+            if (!response.ok) return [];
             const data = await response.json();
             return data.reservations || [];
           } catch (err) {
@@ -205,12 +230,29 @@ export default function Home() {
           const { data: { user } } = await supabase.auth.getUser();
           return user?.id || null;
         })(),
+        (async () => {
+          if (userIds.length === 0) return new Map<string, string | null>();
+          
+          const { data: userInfos } = await supabase
+            .from('userinfo')
+            .select('id, nickname')
+            .in('id', userIds);
+          
+          const nicknamesMap = new Map<string, string | null>();
+          userInfos?.forEach((info) => {
+            nicknamesMap.set(info.id, info.nickname || null);
+          });
+          
+          // Set null for users not found
+          userIds.forEach((id) => {
+            if (!nicknamesMap.has(id)) {
+              nicknamesMap.set(id, null);
+            }
+          });
+          
+          return nicknamesMap;
+        })(),
       ]);
-
-      // Set posts
-      if (postsResult.status === "fulfilled") {
-        setPosts(postsResult.value);
-      }
 
       // Set reservations
       if (reservationsResult.status === "fulfilled") {
@@ -226,6 +268,11 @@ export default function Home() {
       // Set current user ID
       if (userResult.status === "fulfilled") {
         setCurrentUserId(userResult.value);
+      }
+
+      // Set author nicknames
+      if (nicknamesResult.status === "fulfilled") {
+        setAuthorNicknames(nicknamesResult.value);
       }
       
       setLoading(false);
@@ -429,7 +476,13 @@ export default function Home() {
       ) : (
         <div className="space-y-4">
           {filteredPosts.map((post) => (
-            <PostCard key={post.id} post={post} isReserved={reservedPostIds.has(post.id)} currentUserId={currentUserId} />
+            <PostCard 
+              key={post.id} 
+              post={post} 
+              isReserved={reservedPostIds.has(post.id)} 
+              currentUserId={currentUserId}
+              authorNickname={post.user_id ? authorNicknames.get(post.user_id) ?? null : null}
+            />
           ))}
         </div>
       )}

@@ -92,7 +92,7 @@ export default function ProfileForm({
     setCroppedAreaPixels(croppedAreaPixelsParam);
   }, []);
 
-  const resetForm = () => {
+  const handleCancel = () => {
     // Revoke object URL if we created one from a local file
     try {
       if (file && preview) {
@@ -112,64 +112,20 @@ export default function ProfileForm({
     setIsEditingNickname(!(savedNickname ?? initialNickname));
   };
 
-  // Fetch saved profile from Supabase on mount and when auth state changes
+  // Initialize state from props
   useEffect(() => {
-    let mounted = true;
-
-    const fetchProfile = async () => {
-      try {
-        if (!userId) return;
-        const { data, error } = await supabase
-          .from("userinfo")
-          .select("nickname, avatar_url")
-          .eq("id", userId)
-          .single();
-
-        if (error) {
-          // silent: may simply be no row yet
-          console.debug("No saved profile or fetch error:", error.message);
-          return;
-        }
-
-        if (!mounted) return;
-
-        if (data) {
-          setNickname(data.nickname ?? "");
-          setSavedNickname(data.nickname ?? null);
-          setPreview(data.avatar_url ?? null);
-          setSavedAvatarUrl(data.avatar_url ?? null);
-          setIsEditingNickname(!data.nickname);
-        }
-      } catch (e) {
-        console.error("Error fetching profile:", e);
-      }
-    };
-
-    fetchProfile();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event: string, _session: any) => {
-        if (event === "SIGNED_IN" || event === "USER_UPDATED") {
-          fetchProfile();
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      // unsubscribe listener if available
-      try {
-        if (authListener?.subscription?.unsubscribe) {
-          authListener.subscription.unsubscribe();
-        }
-      } catch (e) {
-        // ignore
-      }
-    };
-  }, [userId]);
+    setNickname(initialNickname);
+    setSavedNickname(initialNickname || null);
+    setPreview(initialAvatarUrl);
+    setSavedAvatarUrl(initialAvatarUrl);
+    setIsEditingNickname(!initialNickname);
+  }, [initialNickname, initialAvatarUrl]);
 
   const uploadAndSave = async () => {
-    if (!userId) return alert("No user id available");
+    if (!userId) {
+      console.error("No user id available");
+      return;
+    }
     setLoading(true);
     try {
       let avatarUrl = initialAvatarUrl;
@@ -225,47 +181,46 @@ export default function ProfileForm({
 
       if (dbError) throw dbError;
 
-      // Update UI to reflect saved state: show greeting immediately
-      setIsEditingNickname(false);
+      // Update UI to reflect saved state
       if (avatarUrl) setPreview(avatarUrl);
       setFile(null);
       setCroppedAreaPixels(null);
       // persist last-saved values for Reset behavior
       setSavedNickname(nickname || null);
       setSavedAvatarUrl(avatarUrl ?? null);
-
-      alert("Profile saved");
+      // Only exit edit mode if theres a saved nickname otherwise keep editing
+      setIsEditingNickname(!(nickname || null));
     } catch (err: any) {
       console.error("Profile save error:", err);
-      // Try to extract useful info from Supabase error objects
-      const message =
-        err?.message ||
-        err?.error?.message ||
-        JSON.stringify(err) ||
-        "Unknown error";
-      alert(`Failed to save profile: ${message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4">
+    <div className="max-w-2xl">
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700">
           Nickname
         </label>
 
         {isEditingNickname ? (
-          <input
-            className="mt-1 block w-full rounded-md border px-3 py-2"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="What should people call you?"
-          />
+          <>
+            <input
+              className="mt-1 block w-full rounded-md border px-3 py-2"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="What should people call you?"
+            />
+            {!savedNickname && (
+              <p className="mt-1 text-xs text-gray-500">
+                This will be displayed on your posts. If not set, your posts will show as "Anonymous".
+              </p>
+            )}
+          </>
         ) : (
           <div className="mt-1 flex items-center justify-between">
-            <div className="text-lg"> {nickname}</div>
+            <div className="text-lg"> {nickname || "No nickname set"}</div>
             <button
               type="button"
               className="text-sm text-gray-500 underline"
@@ -282,6 +237,11 @@ export default function ProfileForm({
           Avatar
         </label>
         <input type="file" accept="image/*" onChange={onFileChange} />
+        {!savedAvatarUrl && (
+          <p className="mt-1 text-xs text-gray-500">
+            This will be displayed on your profile. If not set, no avatar will be shown.
+          </p>
+        )}
 
         {preview && (
           <div className="mt-3">
@@ -329,14 +289,16 @@ export default function ProfileForm({
         )}
       </div>
 
-      <div className="flex gap-2">
-        <Button onClick={uploadAndSave} disabled={loading}>
-          {loading ? "Saving…" : "Save profile"}
-        </Button>
-        <Button onClick={resetForm} disabled={loading}>
-          Reset
-        </Button>
-      </div>
+      {((isEditingNickname && (nickname.trim() || null) !== (savedNickname || null)) || file || (preview && preview !== savedAvatarUrl)) && (
+        <div className="flex gap-2">
+          <Button onClick={uploadAndSave} disabled={loading}>
+            {loading ? "Saving…" : "Save profile"}
+          </Button>
+          <Button onClick={handleCancel} disabled={loading}>
+            Cancel
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@ interface PostCardProps {
   isReserved?: boolean;
   currentUserId?: string | null;
   onPostUpdated?: () => void;
+  authorNickname?: string | null;
 }
 
 const CHARACTER_LIMITS = {
@@ -76,7 +77,7 @@ function convertESTToUTC(dateStr: string, timeStr: string): string {
   return utcDate.toISOString();
 }
 
-export default function PostCard({ post, isReserved: initialIsReserved = false, currentUserId = null, onPostUpdated }: PostCardProps) {
+export default function PostCard({ post, isReserved: initialIsReserved = false, currentUserId = null, onPostUpdated, authorNickname = null }: PostCardProps) {
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(false);
   const [isReserved, setIsReserved] = useState(initialIsReserved);
@@ -760,9 +761,14 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
         {/* Content */}
         <div className="flex-1 flex flex-col">
           <div className="flex items-start justify-between mb-3">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 pr-4">
-              {post.title}
-            </h2>
+            <div className="flex-1 pr-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {post.title}
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                By {authorNickname || 'Anonymous'}
+              </p>
+            </div>
             {post.created_at && (
               <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 {formatPostedTime(post.created_at)}

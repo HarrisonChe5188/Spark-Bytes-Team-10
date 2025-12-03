@@ -16,18 +16,18 @@ export default async function ProfilePage() {
   }
 
   const { data: profileData } = await supabase
-    .from("user_info")
-    .select("nickname, image_url")
+    .from("userinfo")
+    .select("nickname, avatar_url")
     .eq("id", user.id)
     .single();
 
   return (
-    <main className="max-w-3xl mx-auto p-6">
+    <main className="max-w-2xl mx-auto p-6">
       <h1 className="text-2xl font-semibold mb-4">Edit Profile</h1>
       <ProfileForm
         userId={user.id}
         initialNickname={profileData?.nickname ?? ""}
-        initialAvatarUrl={profileData?.image_url ?? null}
+        initialAvatarUrl={profileData?.avatar_url ?? null}
       />
     </main>
   );
