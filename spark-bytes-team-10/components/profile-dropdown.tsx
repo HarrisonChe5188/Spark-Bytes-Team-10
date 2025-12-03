@@ -32,17 +32,17 @@ export default function ProfileDropdown({
         } = await supabase.auth.getUser();
         if (!user) return;
         const { data, error } = await supabase
-          .from("user_info")
-          .select("nickname, image_url")
+          .from("userinfo")
+          .select("nickname, avatar_url")
           .eq("id", user.id)
           .single();
         if (error) {
-          console.error("Failed to load user_info", error);
+          console.error("Failed to load userinfo", error);
           return;
         }
         if (!mounted) return;
         setNickname(data?.nickname ?? null);
-        setAvatarUrl(data?.image_url ?? null);
+        setAvatarUrl(data?.avatar_url ?? null);
       } catch (err) {
         console.error(err);
       }
@@ -65,9 +65,6 @@ export default function ProfileDropdown({
             />
           ) : (
             <User size={20} className="text-muted-foreground" />
-          )}
-          {nickname && (
-            <span className="hidden sm:inline text-sm">{nickname}</span>
           )}
         </Button>
       </DropdownMenuTrigger>
