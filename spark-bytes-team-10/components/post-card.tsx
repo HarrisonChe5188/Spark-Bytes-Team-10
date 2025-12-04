@@ -12,6 +12,7 @@ interface PostCardProps {
   currentUserId?: string | null;
   onPostUpdated?: () => void;
   authorNickname?: string | null;
+  authorAvatar?: string | null;
 }
 
 const CHARACTER_LIMITS = {
@@ -77,7 +78,14 @@ function convertESTToUTC(dateStr: string, timeStr: string): string {
   return utcDate.toISOString();
 }
 
-export default function PostCard({ post, isReserved: initialIsReserved = false, currentUserId = null, onPostUpdated, authorNickname = null }: PostCardProps) {
+export default function PostCard({
+  post,
+  isReserved: initialIsReserved = false,
+  currentUserId = null,
+  onPostUpdated,
+  authorNickname = null,
+  authorAvatar = null,
+}: PostCardProps) {
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(false);
   const [isReserved, setIsReserved] = useState(initialIsReserved);
@@ -89,16 +97,23 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
 
   // Edit form state
   const [editTitle, setEditTitle] = useState(post.title);
-  const [editLocation, setEditLocation] = useState(post.location || '');
-  const [editDescription, setEditDescription] = useState(post.description || '');
+  const [editLocation, setEditLocation] = useState(post.location || "");
+  const [editCampusLocation, setEditCampusLocation] = useState(
+    post.campus_location || ""
+  );
+  const [editDescription, setEditDescription] = useState(
+    post.description || ""
+  );
   const [editQuantity, setEditQuantity] = useState(String(post.quantity || 1));
-  const [editDate, setEditDate] = useState('');
-  const [editStartTime, setEditStartTime] = useState('');
-  const [editEndTime, setEditEndTime] = useState('');
+  const [editDate, setEditDate] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [editPreviewUrl, setEditPreviewUrl] = useState<string | null>(null);
   const [editRemoveImage, setEditRemoveImage] = useState(false);
-  const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>({});
+  const [editFieldErrors, setEditFieldErrors] = useState<
+    Record<string, string>
+  >({});
 
   // Update isReserved when prop changes
   useEffect(() => {
@@ -109,10 +124,11 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
   useEffect(() => {
     if (isEditModalOpen) {
       setEditTitle(post.title);
-      setEditLocation(post.location || '');
-      setEditDescription(post.description || '');
+      setEditLocation(post.location || "");
+      setEditCampusLocation(post.campus_location || "");
+      setEditDescription(post.description || "");
       setEditQuantity(String(post.quantity || 1));
-      
+
       // Convert UTC times to EST for form
       if (post.end_time) {
         const endEST = convertUTCToEST(post.end_time);
@@ -123,10 +139,12 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
         const startEST = convertUTCToEST(post.start_time);
         setEditStartTime(startEST.time);
       }
-      
+
       // Set image preview
       if (post.image_path) {
-        const { data } = supabase.storage.from('food_pictures').getPublicUrl(post.image_path);
+        const { data } = supabase.storage
+          .from("food_pictures")
+          .getPublicUrl(post.image_path);
         setEditPreviewUrl(data?.publicUrl || null);
       } else {
         setEditPreviewUrl(null);
@@ -139,11 +157,21 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
 
   const todayDate = useMemo(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(now.getDate()).padStart(2, "0")}`;
   }, []);
 
   // Helper functions for edit form (matching create form logic)
-  type EditFieldName = "title" | "location" | "description" | "quantity" | "startTime" | "endTime";
+  type EditFieldName =
+    | "title"
+    | "location"
+    | "campusLocation"
+    | "description"
+    | "quantity"
+    | "startTime"
+    | "endTime";
 
   const isEditDateToday = (selectedDate: string): boolean => {
     return selectedDate === todayDate;
@@ -172,13 +200,17 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
     }
   };
 
-  const validateTimeRelationship = (selectedDate: string, startTime: string, endTime: string): void => {
+  const validateTimeRelationship = (
+    selectedDate: string,
+    startTime: string,
+    endTime: string
+  ): void => {
     if (!startTime || !endTime) return;
 
     if (startTime >= endTime) {
       setEditFieldErrors((prev) => ({
         ...prev,
-        endTime: "End time must be after start time"
+        endTime: "End time must be after start time",
       }));
     } else {
       setEditFieldErrors((prev) => {
@@ -196,8 +228,14 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
     fieldName: "title" | "location" | "description",
     limit: number
   ): string | null => {
-    if (!value.trim()) return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
-    if (value.length > limit) return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} must be ${limit} characters or less`;
+    if (!value.trim())
+      return `${
+        fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
+      } is required`;
+    if (value.length > limit)
+      return `${
+        fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
+      } must be ${limit} characters or less`;
     return null;
   };
 
@@ -205,7 +243,9 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
   let imageUrl: string | null = "/fallback.png";
   try {
     if (post.image_path) {
-      const { data } = supabase.storage.from('food_pictures').getPublicUrl(post.image_path);
+      const { data } = supabase.storage
+        .from("food_pictures")
+        .getPublicUrl(post.image_path);
       imageUrl = data?.publicUrl || "/fallback.png";
     }
   } catch {
@@ -215,27 +255,27 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
 
   const handleInterested = async () => {
     if (isLoading || !post.id) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/reservations', {
-        method: 'POST',
+      const response = await fetch("/api/reservations", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ post_id: post.id }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to reserve food');
+        throw new Error(data.error || "Failed to reserve food");
       }
 
       setIsReserved(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -247,21 +287,39 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
     const now = new Date();
     const isSelectedToday = isEditDateToday(selectedDate);
 
-    const titleError = validateCharacterLimit(editTitle, "title", CHARACTER_LIMITS.title);
+    const titleError = validateCharacterLimit(
+      editTitle,
+      "title",
+      CHARACTER_LIMITS.title
+    );
     if (titleError) errors.title = titleError;
 
-    const locationError = validateCharacterLimit(editLocation, "location", CHARACTER_LIMITS.location);
+    const locationError = validateCharacterLimit(
+      editLocation,
+      "location",
+      CHARACTER_LIMITS.location
+    );
     if (locationError) errors.location = locationError;
 
-    const descriptionError = validateCharacterLimit(editDescription, "description", CHARACTER_LIMITS.description);
+    if (!editCampusLocation)
+      errors.campusLocation = "Campus location is required";
+
+    const descriptionError = validateCharacterLimit(
+      editDescription,
+      "description",
+      CHARACTER_LIMITS.description
+    );
     if (descriptionError) errors.description = descriptionError;
-    
-    if (!editQuantity || Number(editQuantity) < 1) errors.quantity = "Quantity must be at least 1";
+
+    if (!editQuantity || Number(editQuantity) < 1)
+      errors.quantity = "Quantity must be at least 1";
 
     if (!editEndTime) {
       errors.endTime = "End time is required";
     } else {
-      const endDateTimeUTC = new Date(convertESTToUTC(selectedDate, editEndTime));
+      const endDateTimeUTC = new Date(
+        convertESTToUTC(selectedDate, editEndTime)
+      );
       if (endDateTimeUTC <= now) {
         errors.endTime = "End time must be in the future";
       }
@@ -270,12 +328,16 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
     if (!isSelectedToday && !editStartTime) {
       errors.startTime = "Start time is required for future dates";
     } else if (editStartTime) {
-      const startDateTimeUTC = new Date(convertESTToUTC(selectedDate, editStartTime));
+      const startDateTimeUTC = new Date(
+        convertESTToUTC(selectedDate, editStartTime)
+      );
       if (startDateTimeUTC <= now) {
         errors.startTime = "Start time must be in the future";
       }
       if (editEndTime) {
-        const endDateTimeUTC = new Date(convertESTToUTC(selectedDate, editEndTime));
+        const endDateTimeUTC = new Date(
+          convertESTToUTC(selectedDate, editEndTime)
+        );
         if (endDateTimeUTC <= startDateTimeUTC) {
           errors.endTime = "End time must be after start time";
         }
@@ -294,7 +356,7 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
     e.preventDefault();
     setIsSaving(true);
     setEditFieldErrors({});
-    
+
     if (!validateEditForm()) {
       setIsSaving(false);
       return;
@@ -302,32 +364,35 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
 
     try {
       const selectedDate = getSelectedDate();
-      const startDateTime = editStartTime ? convertESTToUTC(selectedDate, editStartTime) : null;
+      const startDateTime = editStartTime
+        ? convertESTToUTC(selectedDate, editStartTime)
+        : null;
       const endDateTime = convertESTToUTC(selectedDate, editEndTime);
 
       const formData = new FormData();
-      formData.append('id', String(post.id));
-      formData.append('title', editTitle.trim());
-      formData.append('location', editLocation.trim() || '');
-      formData.append('description', editDescription.trim() || '');
-      formData.append('quantity', String(Number(editQuantity) || 1));
-      if (startDateTime) formData.append('start_time', startDateTime);
-      formData.append('end_time', endDateTime);
+      formData.append("id", String(post.id));
+      formData.append("title", editTitle.trim());
+      formData.append("location", editLocation.trim() || "");
+      formData.append("campus_location", editCampusLocation);
+      formData.append("description", editDescription.trim() || "");
+      formData.append("quantity", String(Number(editQuantity) || 1));
+      if (startDateTime) formData.append("start_time", startDateTime);
+      formData.append("end_time", endDateTime);
       if (editSelectedFile) {
-        formData.append('image', editSelectedFile);
+        formData.append("image", editSelectedFile);
       }
       if (editRemoveImage) {
-        formData.append('remove_image', 'true');
+        formData.append("remove_image", "true");
       }
 
-      const response = await fetch('/api/posts', {
-        method: 'PUT',
+      const response = await fetch("/api/posts", {
+        method: "PUT",
         body: formData,
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to update post');
+        throw new Error(data.error || "Failed to update post");
       }
 
       setIsEditModalOpen(false);
@@ -337,7 +402,8 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
         window.dispatchEvent(new CustomEvent("postUpdated"));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      const message =
+        err instanceof Error ? err.message : "An unknown error occurred";
       setEditFieldErrors({ submit: message });
     } finally {
       setIsSaving(false);
@@ -350,16 +416,16 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
 
   const handleDeleteConfirm = async () => {
     if (!post.id) return;
-    
+
     setIsDeleting(true);
     try {
       const response = await fetch(`/api/posts?id=${post.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to delete post');
+        throw new Error(data.error || "Failed to delete post");
       }
 
       setIsDeleteConfirmOpen(false);
@@ -369,7 +435,8 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
         window.dispatchEvent(new CustomEvent("postUpdated"));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      const message =
+        err instanceof Error ? err.message : "An unknown error occurred";
       setError(message);
       setIsDeleteConfirmOpen(false);
     } finally {
@@ -382,29 +449,38 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) return "Just now";
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800)
+      return `${Math.floor(diffInSeconds / 86400)}d ago`;
     return date.toLocaleDateString();
   };
 
   const getESTParts = (date: Date) => {
     const parts = estFormatter.formatToParts(date);
     return {
-      year: parseInt(parts.find(p => p.type === 'year')?.value || '0'),
-      month: parseInt(parts.find(p => p.type === 'month')?.value || '0'),
-      day: parseInt(parts.find(p => p.type === 'day')?.value || '0'),
-      hour: parseInt(parts.find(p => p.type === 'hour')?.value || '0'),
-      minute: parseInt(parts.find(p => p.type === 'minute')?.value || '0')
+      year: parseInt(parts.find((p) => p.type === "year")?.value || "0"),
+      month: parseInt(parts.find((p) => p.type === "month")?.value || "0"),
+      day: parseInt(parts.find((p) => p.type === "day")?.value || "0"),
+      hour: parseInt(parts.find((p) => p.type === "hour")?.value || "0"),
+      minute: parseInt(parts.find((p) => p.type === "minute")?.value || "0"),
     };
   };
 
   const getNowEST = () => getESTParts(new Date());
 
-  const isSameDay = (date1: ReturnType<typeof getESTParts>, date2: ReturnType<typeof getESTParts>) => {
-    return date1.year === date2.year && date1.month === date2.month && date1.day === date2.day;
+  const isSameDay = (
+    date1: ReturnType<typeof getESTParts>,
+    date2: ReturnType<typeof getESTParts>
+  ) => {
+    return (
+      date1.year === date2.year &&
+      date1.month === date2.month &&
+      date1.day === date2.day
+    );
   };
 
   const isToday = (dateEST: ReturnType<typeof getESTParts>) => {
@@ -415,24 +491,26 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
   const isTomorrow = (dateEST: ReturnType<typeof getESTParts>) => {
     const nowEST = getNowEST();
     const tomorrowEST = new Date(nowEST.year, nowEST.month - 1, nowEST.day + 1);
-    return dateEST.year === tomorrowEST.getFullYear() &&
-           dateEST.month === tomorrowEST.getMonth() + 1 &&
-           dateEST.day === tomorrowEST.getDate();
+    return (
+      dateEST.year === tomorrowEST.getFullYear() &&
+      dateEST.month === tomorrowEST.getMonth() + 1 &&
+      dateEST.day === tomorrowEST.getDate()
+    );
   };
 
   const formatTimeOnly = (dateTimeString: string): string => {
     const dateEST = getESTParts(new Date(dateTimeString));
     const hour12 = dateEST.hour % 12 || 12;
-    const ampm = dateEST.hour >= 12 ? 'PM' : 'AM';
-    return `${hour12}:${String(dateEST.minute).padStart(2, '0')} ${ampm}`;
+    const ampm = dateEST.hour >= 12 ? "PM" : "AM";
+    return `${hour12}:${String(dateEST.minute).padStart(2, "0")} ${ampm}`;
   };
 
   const formatDateTime = (dateTimeString?: string) => {
     if (!dateTimeString) return null;
-    
+
     const dateEST = getESTParts(new Date(dateTimeString));
     const timeStr = formatTimeOnly(dateTimeString);
-    
+
     if (isToday(dateEST)) {
       return `Today at ${timeStr}`;
     } else if (isTomorrow(dateEST)) {
@@ -445,7 +523,7 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
   const formatCreatedDate = (dateString?: string) => {
     if (!dateString) return null;
     const date = new Date(dateString);
-    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const month = date.toLocaleDateString("en-US", { month: "short" });
     const day = date.getDate();
     const year = date.getFullYear();
     return `${month} ${day}, ${year}`;
@@ -466,23 +544,24 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
   const formatTimeRange = (startTime: string, endTime: string): string => {
     const startEST = getESTParts(new Date(startTime));
     const endEST = getESTParts(new Date(endTime));
-    
+
     if (!isSameDay(startEST, endEST)) {
       return `${formatDateTime(startTime)} - ${formatDateTime(endTime)}`;
     }
-    
+
     const startTimeStr = formatTimeOnly(startTime);
     const endTimeStr = formatTimeOnly(endTime);
-    
+
     if (isToday(startEST)) {
       return `Today from ${startTimeStr} - ${endTimeStr}`;
     } else if (isTomorrow(startEST)) {
       return `Tomorrow from ${startTimeStr} - ${endTimeStr}`;
     } else {
-      return `${MONTH_NAMES[startEST.month - 1]} ${startEST.day} from ${startTimeStr} - ${endTimeStr}`;
+      return `${MONTH_NAMES[startEST.month - 1]} ${
+        startEST.day
+      } from ${startTimeStr} - ${endTimeStr}`;
     }
   };
-
 
   return (
     <>
@@ -498,30 +577,49 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Edit Post
               </h3>
-              <form onSubmit={handleEditSubmit} className="space-y-4" noValidate>
+              <form
+                onSubmit={handleEditSubmit}
+                className="space-y-4"
+                noValidate
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Title *
                   </label>
                   <input
-                    className={`${INPUT_CLASSES} ${editFieldErrors.title ? "border-red-500" : ""}`}
+                    className={`${INPUT_CLASSES} ${
+                      editFieldErrors.title ? "border-red-500" : ""
+                    }`}
                     placeholder="e.g., Fresh Pizza Slices"
                     value={editTitle}
                     maxLength={CHARACTER_LIMITS.title}
-                    onChange={(e) => handleFieldChange(e.target.value, setEditTitle, "title")}
+                    onChange={(e) =>
+                      handleFieldChange(e.target.value, setEditTitle, "title")
+                    }
                   />
                   <div className="flex justify-between items-center mt-1">
                     {editFieldErrors.title && (
-                      <p className="text-sm text-red-600">{editFieldErrors.title}</p>
+                      <p className="text-sm text-red-600">
+                        {editFieldErrors.title}
+                      </p>
                     )}
-                    <p className={`text-xs ml-auto ${editTitle.length > CHARACTER_LIMITS.title * 0.9 ? "text-red-600" : "text-gray-500 dark:text-gray-400"}`}>
+                    <p
+                      className={`text-xs ml-auto ${
+                        editTitle.length > CHARACTER_LIMITS.title * 0.9
+                          ? "text-red-600"
+                          : "text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
                       {editTitle.length}/{CHARACTER_LIMITS.title}
                     </p>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Date <span className="text-gray-500 dark:text-gray-400 font-normal">(leave empty for today)</span>
+                    Date{" "}
+                    <span className="text-gray-500 dark:text-gray-400 font-normal">
+                      (leave empty for today)
+                    </span>
                   </label>
                   <input
                     type="date"
@@ -531,12 +629,16 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
                       const newDate = e.target.value;
                       setEditDate(newDate);
                       const selectedDate = newDate || todayDate;
-                      
+
                       clearFieldError("startTime");
                       clearFieldError("endTime");
-                      
+
                       if (editStartTime && editEndTime) {
-                        validateTimeRelationship(selectedDate, editStartTime, editEndTime);
+                        validateTimeRelationship(
+                          selectedDate,
+                          editStartTime,
+                          editEndTime
+                        );
                       }
                     }}
                     min={todayDate}
@@ -545,26 +647,41 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Start Time {isEditDateToday(getSelectedDate()) ? (
-                        <span className="text-gray-500 dark:text-gray-400 font-normal">(leave empty for &quot;Now&quot;)</span>
+                      Start Time{" "}
+                      {isEditDateToday(getSelectedDate()) ? (
+                        <span className="text-gray-500 dark:text-gray-400 font-normal">
+                          (leave empty for &quot;Now&quot;)
+                        </span>
                       ) : (
                         "*"
                       )}
                     </label>
                     <input
                       type="time"
-                      className={`${INPUT_CLASSES} ${editFieldErrors.startTime ? "border-red-500" : ""}`}
+                      className={`${INPUT_CLASSES} ${
+                        editFieldErrors.startTime ? "border-red-500" : ""
+                      }`}
                       value={editStartTime}
                       onChange={(e) => {
                         const newStartTime = e.target.value;
-                        handleFieldChange(newStartTime, setEditStartTime, "startTime");
+                        handleFieldChange(
+                          newStartTime,
+                          setEditStartTime,
+                          "startTime"
+                        );
                         if (newStartTime && editEndTime) {
-                          validateTimeRelationship(getSelectedDate(), newStartTime, editEndTime);
+                          validateTimeRelationship(
+                            getSelectedDate(),
+                            newStartTime,
+                            editEndTime
+                          );
                         }
                       }}
                     />
                     {editFieldErrors.startTime && (
-                      <p className="text-sm text-red-600 mt-1">{editFieldErrors.startTime}</p>
+                      <p className="text-sm text-red-600 mt-1">
+                        {editFieldErrors.startTime}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -573,46 +690,108 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
                     </label>
                     <input
                       type="time"
-                      className={`${INPUT_CLASSES} ${editFieldErrors.endTime ? "border-red-500" : ""}`}
+                      className={`${INPUT_CLASSES} ${
+                        editFieldErrors.endTime ? "border-red-500" : ""
+                      }`}
                       value={editEndTime}
                       onChange={(e) => {
                         const newEndTime = e.target.value;
-                        const isTimeRelationshipError = editFieldErrors.endTime === "End time must be after start time";
-                        handleFieldChange(newEndTime, setEditEndTime, "endTime");
-                        if (editFieldErrors.endTime && !isTimeRelationshipError) {
+                        const isTimeRelationshipError =
+                          editFieldErrors.endTime ===
+                          "End time must be after start time";
+                        handleFieldChange(
+                          newEndTime,
+                          setEditEndTime,
+                          "endTime"
+                        );
+                        if (
+                          editFieldErrors.endTime &&
+                          !isTimeRelationshipError
+                        ) {
                           clearFieldError("endTime");
                         }
                         if (editStartTime && newEndTime) {
-                          validateTimeRelationship(getSelectedDate(), editStartTime, newEndTime);
+                          validateTimeRelationship(
+                            getSelectedDate(),
+                            editStartTime,
+                            newEndTime
+                          );
                         } else if (isTimeRelationshipError) {
                           clearFieldError("endTime");
                         }
                       }}
                     />
                     {editFieldErrors.endTime && (
-                      <p className="text-sm text-red-600 mt-1">{editFieldErrors.endTime}</p>
+                      <p className="text-sm text-red-600 mt-1">
+                        {editFieldErrors.endTime}
+                      </p>
                     )}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Location *
+                    Specific Location *
                   </label>
                   <input
-                    className={`${INPUT_CLASSES} ${editFieldErrors.location ? "border-red-500" : ""}`}
+                    className={`${INPUT_CLASSES} ${
+                      editFieldErrors.location ? "border-red-500" : ""
+                    }`}
                     placeholder="e.g., Student Center, Room 205"
                     value={editLocation}
                     maxLength={CHARACTER_LIMITS.location}
-                    onChange={(e) => handleFieldChange(e.target.value, setEditLocation, "location")}
+                    onChange={(e) =>
+                      handleFieldChange(
+                        e.target.value,
+                        setEditLocation,
+                        "location"
+                      )
+                    }
                   />
                   <div className="flex justify-between items-center mt-1">
                     {editFieldErrors.location && (
-                      <p className="text-sm text-red-600">{editFieldErrors.location}</p>
+                      <p className="text-sm text-red-600">
+                        {editFieldErrors.location}
+                      </p>
                     )}
-                    <p className={`text-xs ml-auto ${editLocation.length > CHARACTER_LIMITS.location * 0.9 ? "text-red-600" : "text-gray-500 dark:text-gray-400"}`}>
+                    <p
+                      className={`text-xs ml-auto ${
+                        editLocation.length > CHARACTER_LIMITS.location * 0.9
+                          ? "text-red-600"
+                          : "text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
                       {editLocation.length}/{CHARACTER_LIMITS.location}
                     </p>
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Campus Location *
+                  </label>
+                  <select
+                    className={`${INPUT_CLASSES} ${
+                      editFieldErrors.campusLocation ? "border-red-500" : ""
+                    }`}
+                    value={editCampusLocation}
+                    onChange={(e) =>
+                      handleFieldChange(
+                        e.target.value,
+                        setEditCampusLocation,
+                        "campusLocation"
+                      )
+                    }
+                  >
+                    <option value="">Select a campus</option>
+                    <option value="South Campus">South Campus</option>
+                    <option value="North Campus">North Campus</option>
+                    <option value="East Campus">East Campus</option>
+                    <option value="West Campus">West Campus</option>
+                  </select>
+                  {editFieldErrors.campusLocation && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {editFieldErrors.campusLocation}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -621,13 +800,23 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
                   <input
                     type="number"
                     min="1"
-                    className={`${INPUT_CLASSES} ${editFieldErrors.quantity ? "border-red-500" : ""}`}
+                    className={`${INPUT_CLASSES} ${
+                      editFieldErrors.quantity ? "border-red-500" : ""
+                    }`}
                     placeholder="e.g., 5"
                     value={editQuantity}
-                    onChange={(e) => handleFieldChange(e.target.value, setEditQuantity, "quantity")}
+                    onChange={(e) =>
+                      handleFieldChange(
+                        e.target.value,
+                        setEditQuantity,
+                        "quantity"
+                      )
+                    }
                   />
                   {editFieldErrors.quantity && (
-                    <p className="text-sm text-red-600 mt-1">{editFieldErrors.quantity}</p>
+                    <p className="text-sm text-red-600 mt-1">
+                      {editFieldErrors.quantity}
+                    </p>
                   )}
                 </div>
                 <div>
@@ -635,18 +824,35 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
                     Description *
                   </label>
                   <textarea
-                    className={`${INPUT_CLASSES} resize-none ${editFieldErrors.description ? "border-red-500" : ""}`}
+                    className={`${INPUT_CLASSES} resize-none ${
+                      editFieldErrors.description ? "border-red-500" : ""
+                    }`}
                     placeholder="Describe the food item..."
                     rows={3}
                     value={editDescription}
                     maxLength={CHARACTER_LIMITS.description}
-                    onChange={(e) => handleFieldChange(e.target.value, setEditDescription, "description")}
+                    onChange={(e) =>
+                      handleFieldChange(
+                        e.target.value,
+                        setEditDescription,
+                        "description"
+                      )
+                    }
                   />
                   <div className="flex justify-between items-center mt-1">
                     {editFieldErrors.description && (
-                      <p className="text-sm text-red-600">{editFieldErrors.description}</p>
+                      <p className="text-sm text-red-600">
+                        {editFieldErrors.description}
+                      </p>
                     )}
-                    <p className={`text-xs ml-auto ${editDescription.length > CHARACTER_LIMITS.description * 0.9 ? "text-red-600" : "text-gray-500 dark:text-gray-400"}`}>
+                    <p
+                      className={`text-xs ml-auto ${
+                        editDescription.length >
+                        CHARACTER_LIMITS.description * 0.9
+                          ? "text-red-600"
+                          : "text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
                       {editDescription.length}/{CHARACTER_LIMITS.description}
                     </p>
                   </div>
@@ -657,7 +863,11 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
                   </label>
                   {editPreviewUrl && !editRemoveImage && (
                     <div className="mb-2 relative">
-                      <img src={editPreviewUrl} alt="preview" className="w-full h-40 object-cover rounded" />
+                      <img
+                        src={editPreviewUrl}
+                        alt="preview"
+                        className="w-full h-40 object-cover rounded"
+                      />
                       <button
                         type="button"
                         onClick={() => {
@@ -687,7 +897,9 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
                   )}
                 </div>
                 {editFieldErrors.submit && (
-                  <p className="text-sm text-red-600">{editFieldErrors.submit}</p>
+                  <p className="text-sm text-red-600">
+                    {editFieldErrors.submit}
+                  </p>
                 )}
                 <div className="flex justify-end gap-2 pt-4">
                   <Button
@@ -724,11 +936,10 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
               Delete Post
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Are you sure you want to delete this post? This action cannot be undone and will also cancel all reservations for this post.
+              Are you sure you want to delete this post? This action cannot be
+              undone and will also cancel all reservations for this post.
             </p>
-            {error && (
-              <p className="text-sm text-red-600 mb-4">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
@@ -753,130 +964,146 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
 
       <div className="p-5 border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-800 transition-all duration-200">
         <div className="flex flex-col md:flex-row gap-4">
-        {/* Image - mobile (full width, fixed height) */}
-{imageUrl && (
-  <div className="w-full md:hidden">
-    <div className="w-full h-48 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
-      <img
-        src={imageUrl || "/fallback.png"}
-        alt={post.title || "image"}
-        className="w-full h-full object-cover"
-      />
-    </div>
-  </div>
-)}
-
-{/* Image - desktop (consistent width, variable height, perfect crop) */}
-{imageUrl && (
-  <div className="hidden md:flex flex-shrink-0">
-    <div className="w-40 h-40 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
-      <img
-        src={imageUrl || "/fallback.png"}
-        alt={post.title || "image"}
-        className="w-full h-full object-cover"
-      />
-    </div>
-  </div>
-)}
-
-
-
-        {/* Content */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1 pr-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                {post.title}
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                By {authorNickname || 'Anonymous'}
-              </p>
-            </div>
-            {post.created_at && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                {formatPostedTime(post.created_at)}
-              </p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <Clock size={16} className="text-gray-400 dark:text-gray-500" />
-              <span>
-                {isPostEnded() && post.created_at
-                  ? formatCreatedDate(post.created_at)
-                  : post.start_time && post.end_time
-                  ? formatTimeRange(post.start_time, post.end_time)
-                  : post.start_time
-                  ? formatDateTime(post.start_time)
-                  : post.end_time
-                  ? formatNowToEndTime(post.end_time)
-                  : "Now"}
-              </span>
-            </div>
-            
-            {post.location && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <MapPin size={16} className="text-gray-400 dark:text-gray-500" />
-                <span>{post.location}</span>
+          {/* Image - mobile (full width, fixed height) */}
+          {imageUrl && (
+            <div className="w-full md:hidden">
+              <div className="w-full h-48 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
+                <img
+                  src={imageUrl || "/fallback.png"}
+                  alt={post.title || "image"}
+                  className="w-full h-full object-cover"
+                />
               </div>
-            )}
-            
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 pt-1">
-              {post.description && (
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed flex-1">
-                  {post.description}
+            </div>
+          )}
+
+          {/* Image - desktop (consistent width, variable height, perfect crop) */}
+          {imageUrl && (
+            <div className="hidden md:flex flex-shrink-0">
+              <div className="w-40 h-40 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
+                <img
+                  src={imageUrl || "/fallback.png"}
+                  alt={post.title || "image"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Content */}
+          <div className="flex-1 flex flex-col">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 pr-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {post.title}
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                  {authorAvatar ? (
+                    <img
+                      src={authorAvatar}
+                      alt={authorNickname || "Anonymous"}
+                      className="w-5 h-5 rounded-md object-cover"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-md bg-gray-300 dark:bg-gray-600" />
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {authorNickname || "Anonymous"}
+                  </p>
+                </div>
+              </div>
+              {post.created_at && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                  {formatPostedTime(post.created_at)}
                 </p>
               )}
-              {!isPostEnded() ? (
-                <div className="flex flex-col items-end gap-1">
-                  {currentUserId === post.user_id ? (
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleEdit}
-                        className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={handleDelete}
-                        className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Button 
-                        onClick={handleInterested}
-                        disabled={isLoading || isReserved}
-                        className={`font-medium whitespace-nowrap ${
-                          isReserved 
-                            ? 'bg-green-600 hover:bg-green-700' 
-                            : 'bg-red-600 hover:bg-red-700'
-                        } text-white`}
-                        size="sm"
-                      >
-                        {isLoading ? 'Reserving...' : isReserved ? '✓ Reserved' : "I'm interested"}
-                      </Button>
-                      {error && (
-                        <p className="text-xs text-red-500">{error}</p>
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
-                    Ended
-                  </span>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <Clock size={16} className="text-gray-400 dark:text-gray-500" />
+                <span>
+                  {isPostEnded() && post.created_at
+                    ? formatCreatedDate(post.created_at)
+                    : post.start_time && post.end_time
+                    ? formatTimeRange(post.start_time, post.end_time)
+                    : post.start_time
+                    ? formatDateTime(post.start_time)
+                    : post.end_time
+                    ? formatNowToEndTime(post.end_time)
+                    : "Now"}
+                </span>
+              </div>
+
+              {post.location && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <MapPin
+                    size={16}
+                    className="text-gray-400 dark:text-gray-500"
+                  />
+                  <span>{post.location}</span>
                 </div>
               )}
+
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 pt-1">
+                {post.description && (
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed flex-1">
+                    {post.description}
+                  </p>
+                )}
+                {!isPostEnded() ? (
+                  <div className="flex flex-col items-end gap-1">
+                    {currentUserId === post.user_id ? (
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleEdit}
+                          className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={handleDelete}
+                          className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={handleInterested}
+                          disabled={isLoading || isReserved}
+                          className={`font-medium whitespace-nowrap ${
+                            isReserved
+                              ? "bg-green-600 hover:bg-green-700"
+                              : "bg-red-600 hover:bg-red-700"
+                          } text-white`}
+                          size="sm"
+                        >
+                          {isLoading
+                            ? "Reserving..."
+                            : isReserved
+                            ? "✓ Reserved"
+                            : "I'm interested"}
+                        </Button>
+                        {error && (
+                          <p className="text-xs text-red-500">{error}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                      Ended
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
     </>
   );
 }

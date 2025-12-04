@@ -61,7 +61,7 @@ export default function ProfileDropdown({
             <img
               src={avatarUrl}
               alt={nickname ?? "avatar"}
-              className="w-7 h-7 rounded-full object-cover"
+              className="w-7 h-7 rounded-md object-cover"
             />
           ) : (
             <User size={20} className="text-muted-foreground" />

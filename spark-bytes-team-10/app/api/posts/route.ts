@@ -7,6 +7,7 @@ export async function PUT(request: Request) {
     const postId = formData.get('id') as string
     const title = formData.get('title') as string
     const location = formData.get('location') as string
+    const campusLocation = formData.get('campus_location') as string
     const description = formData.get('description') as string
     const quantity = formData.get('quantity') ? parseInt(formData.get('quantity') as string) : null
     const startTime = formData.get('start_time') as string | null
@@ -14,7 +15,7 @@ export async function PUT(request: Request) {
     const imageFile = formData.get('image') as File | null
     const removeImage = formData.get('remove_image') === 'true'
 
-    if (!postId || !title || !location || !description || !endTime) {
+    if (!postId || !title || !location || !campusLocation || !description || !endTime) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -119,6 +120,7 @@ export async function PUT(request: Request) {
       start_time: string | null;
       end_time: string;
       location: string | null;
+      campus_location: string;
       description: string | null;
       quantity: number;
       total_quantity: number;
@@ -129,6 +131,7 @@ export async function PUT(request: Request) {
       start_time: startTime ? startTime : null,
       end_time: endTime,
       location: location.trim() || null,
+      campus_location: campusLocation,
       description: description.trim() || null,
       quantity: newQuantity,
       total_quantity: newQuantity,
@@ -259,13 +262,14 @@ export async function POST(request: Request) {
     const formData = await request.formData()
     const title = formData.get('title') as string
     const location = formData.get('location') as string
+    const campusLocation = formData.get('campus_location') as string
     const description = formData.get('description') as string
     const quantity = parseInt(formData.get('quantity') as string)
     const startTime = formData.get('start_time') as string | null
     const endTime = formData.get('end_time') as string
     const imageFile = formData.get('image') as File | null
 
-    if (!title || !location || !description || !quantity || !endTime) {
+    if (!title || !location || !campusLocation || !description || !quantity || !endTime) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -322,6 +326,7 @@ export async function POST(request: Request) {
         start_time: startTime ? startTime : null,
         end_time: endTime,
         location: location.trim() || null,
+        campus_location: campusLocation,
         description: description.trim() || null,
         quantity: quantity || 1,
         quantity_left: quantity || 1,

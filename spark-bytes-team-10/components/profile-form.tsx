@@ -75,6 +75,7 @@ export default function ProfileForm({
     initialAvatarUrl || null
   );
   const [loading, setLoading] = useState(false);
+  const [isEditingAvatar, setIsEditingAvatar] = useState(false);
 
   // Cropper state
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -85,7 +86,10 @@ export default function ProfileForm({
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
     setFile(f);
-    if (f) setPreview(URL.createObjectURL(f));
+    if (f) {
+      setPreview(URL.createObjectURL(f));
+      setIsEditingAvatar(true);
+    }
   };
 
   const onCropComplete = useCallback((_: any, croppedAreaPixelsParam: any) => {
@@ -110,6 +114,7 @@ export default function ProfileForm({
     setRotation(0);
     setCroppedAreaPixels(null);
     setIsEditingNickname(!(savedNickname ?? initialNickname));
+    setIsEditingAvatar(false);
   };
 
   // Initialize state from props
@@ -156,10 +161,10 @@ export default function ProfileForm({
         // preserve extension if possible
         const extMatch = (file.name || "").match(/\.([a-zA-Z0-9]+)$/);
         const ext = extMatch ? `.${extMatch[1]}` : ".png";
-        const path = `avatars/${userId}/avatar${ext}`;
+        const path = `${userId}/avatar${ext}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("avatars")
+          .from("profile-images")
           .upload(path, uploadBlob as Blob, { upsert: true });
 
         if (uploadError) {
@@ -168,7 +173,7 @@ export default function ProfileForm({
         }
 
         const { data: publicData } = supabase.storage
-          .from("avatars")
+          .from("profile-images")
           .getPublicUrl(path);
         avatarUrl = publicData?.publicUrl ?? null;
       }
@@ -190,6 +195,7 @@ export default function ProfileForm({
       setSavedAvatarUrl(avatarUrl ?? null);
       // Only exit edit mode if theres a saved nickname otherwise keep editing
       setIsEditingNickname(!(nickname || null));
+      setIsEditingAvatar(false);
     } catch (err: any) {
       console.error("Profile save error:", err);
     } finally {
@@ -214,7 +220,8 @@ export default function ProfileForm({
             />
             {!savedNickname && (
               <p className="mt-1 text-xs text-gray-500">
-                This will be displayed on your posts. If not set, your posts will show as "Anonymous".
+                This will be displayed on your posts. If not set, your posts
+                will show as "Anonymous".
               </p>
             )}
           </>
@@ -236,60 +243,84 @@ export default function ProfileForm({
         <label className="block text-sm font-medium text-gray-700">
           Avatar
         </label>
-        <input type="file" accept="image/*" onChange={onFileChange} />
-        {!savedAvatarUrl && (
-          <p className="mt-1 text-xs text-gray-500">
-            This will be displayed on your profile. If not set, no avatar will be shown.
-          </p>
-        )}
 
-        {preview && (
-          <div className="mt-3">
-            <div className="relative w-full h-72 bg-gray-50">
-              <Cropper
-                image={preview}
-                crop={crop}
-                zoom={zoom}
-                rotation={rotation}
-                aspect={1}
-                onCropChange={setCrop}
-                onZoomChange={setZoom}
-                onRotationChange={setRotation}
-                onCropComplete={onCropComplete}
-              />
-            </div>
-
-            <div className="flex gap-2 mt-3">
-              <label className="flex-1">
-                Zoom
-                <input
-                  type="range"
-                  min={1}
-                  max={3}
-                  step={0.1}
-                  value={zoom}
-                  onChange={(e) => setZoom(Number(e.target.value))}
-                  className="w-full"
-                />
-              </label>
-              <label className="w-32">
-                Rotate
-                <input
-                  type="range"
-                  min={0}
-                  max={360}
-                  step={1}
-                  value={rotation}
-                  onChange={(e) => setRotation(Number(e.target.value))}
-                  className="w-full"
-                />
-              </label>
-            </div>
+        {!isEditingAvatar && savedAvatarUrl ? (
+          <div className="mt-1 flex items-center justify-between">
+            <img
+              src={savedAvatarUrl}
+              alt="Profile avatar"
+              className="w-48 h-48 rounded-md object-cover"
+            />
+            <button
+              type="button"
+              className="text-sm text-gray-500 underline"
+              onClick={() => setIsEditingAvatar(true)}
+            >
+              Edit
+            </button>
           </div>
+        ) : (
+          <>
+            <input type="file" accept="image/*" onChange={onFileChange} />
+            {!savedAvatarUrl && (
+              <p className="mt-1 text-xs text-gray-500">
+                This will be displayed on your profile. If not set, no avatar
+                will be shown.
+              </p>
+            )}
+
+            {preview && (
+              <div className="mt-3">
+                <div className="relative w-full h-72 bg-gray-50">
+                  <Cropper
+                    image={preview}
+                    crop={crop}
+                    zoom={zoom}
+                    rotation={rotation}
+                    aspect={1}
+                    onCropChange={setCrop}
+                    onZoomChange={setZoom}
+                    onRotationChange={setRotation}
+                    onCropComplete={onCropComplete}
+                  />
+                </div>
+
+                <div className="flex gap-2 mt-3">
+                  <label className="flex-1">
+                    Zoom
+                    <input
+                      type="range"
+                      min={1}
+                      max={3}
+                      step={0.1}
+                      value={zoom}
+                      onChange={(e) => setZoom(Number(e.target.value))}
+                      className="w-full"
+                    />
+                  </label>
+                  <label className="w-32">
+                    Rotate
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      step={1}
+                      value={rotation}
+                      onChange={(e) => setRotation(Number(e.target.value))}
+                      className="w-full"
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {((isEditingNickname && (nickname.trim() || null) !== (savedNickname || null)) || file || (preview && preview !== savedAvatarUrl)) && (
+      {((isEditingNickname &&
+        (nickname.trim() || null) !== (savedNickname || null)) ||
+        file ||
+        (preview && preview !== savedAvatarUrl)) && (
         <div className="flex gap-2">
           <Button onClick={uploadAndSave} disabled={loading}>
             {loading ? "Saving…" : "Save profile"}

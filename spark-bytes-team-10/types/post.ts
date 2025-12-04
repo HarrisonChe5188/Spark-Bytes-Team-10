@@ -4,6 +4,7 @@ export interface Post {
   start_time?: string;
   end_time?: string;
   location?: string;
+  campus_location?: string;
   description?: string;
   image_path?: string | null;
   quantity: number;

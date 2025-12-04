@@ -14,7 +14,14 @@ const CHARACTER_LIMITS = {
   description: 250,
 } as const;
 
-type FieldName = "title" | "location" | "description" | "quantity" | "startTime" | "endTime";
+type FieldName =
+  | "title"
+  | "location"
+  | "campusLocation"
+  | "description"
+  | "quantity"
+  | "startTime"
+  | "endTime";
 
 /**
  * Converts an EST/EDT datetime to UTC ISO string for storage in Supabase.
@@ -52,6 +59,7 @@ function PostPageContent() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
+  const [campusLocation, setCampusLocation] = useState("");
   const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
@@ -62,7 +70,10 @@ function PostPageContent() {
 
   const todayDate = useMemo(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(now.getDate()).padStart(2, "0")}`;
   }, []);
 
   const isToday = (selectedDate: string): boolean => {
@@ -92,13 +103,17 @@ function PostPageContent() {
     }
   };
 
-  const validateTimeRelationship = (selectedDate: string, startTime: string, endTime: string): void => {
+  const validateTimeRelationship = (
+    selectedDate: string,
+    startTime: string,
+    endTime: string
+  ): void => {
     if (!startTime || !endTime) return;
 
     if (startTime >= endTime) {
       setFieldErrors((prev) => ({
         ...prev,
-        endTime: "End time must be after start time"
+        endTime: "End time must be after start time",
       }));
     } else {
       setFieldErrors((prev) => {
@@ -116,8 +131,14 @@ function PostPageContent() {
     fieldName: "title" | "location" | "description",
     limit: number
   ): string | null => {
-    if (!value.trim()) return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
-    if (value.length > limit) return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} must be ${limit} characters or less`;
+    if (!value.trim())
+      return `${
+        fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
+      } is required`;
+    if (value.length > limit)
+      return `${
+        fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
+      } must be ${limit} characters or less`;
     return null;
   };
 
@@ -127,16 +148,31 @@ function PostPageContent() {
     const now = new Date();
     const isSelectedToday = isToday(selectedDate);
 
-    const titleError = validateCharacterLimit(title, "title", CHARACTER_LIMITS.title);
+    const titleError = validateCharacterLimit(
+      title,
+      "title",
+      CHARACTER_LIMITS.title
+    );
     if (titleError) errors.title = titleError;
 
-    const locationError = validateCharacterLimit(location, "location", CHARACTER_LIMITS.location);
+    const locationError = validateCharacterLimit(
+      location,
+      "location",
+      CHARACTER_LIMITS.location
+    );
     if (locationError) errors.location = locationError;
 
-    const descriptionError = validateCharacterLimit(description, "description", CHARACTER_LIMITS.description);
+    if (!campusLocation) errors.campusLocation = "Campus location is required";
+
+    const descriptionError = validateCharacterLimit(
+      description,
+      "description",
+      CHARACTER_LIMITS.description
+    );
     if (descriptionError) errors.description = descriptionError;
-    
-    if (!quantity || Number(quantity) < 1) errors.quantity = "Quantity must be at least 1";
+
+    if (!quantity || Number(quantity) < 1)
+      errors.quantity = "Quantity must be at least 1";
 
     if (!endTime) {
       errors.endTime = "End time is required";
@@ -150,7 +186,9 @@ function PostPageContent() {
     if (!isSelectedToday && !startTime) {
       errors.startTime = "Start time is required for future dates";
     } else if (startTime) {
-      const startDateTimeUTC = new Date(convertESTToUTC(selectedDate, startTime));
+      const startDateTimeUTC = new Date(
+        convertESTToUTC(selectedDate, startTime)
+      );
       if (startDateTimeUTC <= now) {
         errors.startTime = "Start time must be in the future";
       }
@@ -185,6 +223,7 @@ function PostPageContent() {
       const formData = new FormData();
       formData.append('title', title.trim());
       formData.append('location', location.trim() || '');
+      formData.append("campus_location", campusLocation);
       formData.append('description', description.trim() || '');
       formData.append('quantity', String(Number(quantity) || 1));
       if (startDateTime) formData.append('start_time', startDateTime);
@@ -225,31 +264,43 @@ function PostPageContent() {
             ← Back to Home
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">How it works</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              How it works
+            </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              Share food with the BU community! Fill out the form below to create a post. 
-              Include the time window when the food is available, the location where people can pick it up, 
-              and a description of what you&apos;re sharing. Once posted, others can express interest and 
-              come collect the food during the specified time.
+              Share food with the BU community! Fill out the form below to
+              create a post. Include the time window when the food is available,
+              the location where people can pick it up, and a description of
+              what you&apos;re sharing. Once posted, others can express interest
+              and come collect the food during the specified time.
             </p>
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Step 1: Fill out the form</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                Step 1: Fill out the form
+              </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Provide details about the food you&apos;re sharing, including title, availability times, location, and quantity.
+                Provide details about the food you&apos;re sharing, including
+                title, availability times, location, and quantity.
               </p>
             </div>
             <div className="space-y-2">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Step 2: Post your listing</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                Step 2: Post your listing
+              </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Once you submit, your post will appear in the feed where others can see it and express interest.
+                Once you submit, your post will appear in the feed where others
+                can see it and express interest.
               </p>
             </div>
             <div className="space-y-2">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Step 3: Share the food</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                Step 3: Share the food
+              </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Be available at the specified time and location to share your food with community members.
+                Be available at the specified time and location to share your
+                food with community members.
               </p>
             </div>
           </div>
@@ -272,7 +323,9 @@ function PostPageContent() {
             ← Back to How it works
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create a Food Post</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Create a Food Post
+            </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
               Fill out the form below to share your food with the BU community.
             </p>
@@ -283,24 +336,37 @@ function PostPageContent() {
                 Title *
               </label>
               <input
-                className={`${INPUT_CLASSES} ${fieldErrors.title ? "border-red-500" : ""}`}
+                className={`${INPUT_CLASSES} ${
+                  fieldErrors.title ? "border-red-500" : ""
+                }`}
                 placeholder="e.g., Fresh Pizza Slices"
                 value={title}
                 maxLength={CHARACTER_LIMITS.title}
-                onChange={(e) => handleFieldChange(e.target.value, setTitle, "title")}
+                onChange={(e) =>
+                  handleFieldChange(e.target.value, setTitle, "title")
+                }
               />
               <div className="flex justify-between items-center mt-1">
                 {fieldErrors.title && (
                   <p className="text-sm text-red-600">{fieldErrors.title}</p>
                 )}
-                <p className={`text-xs ml-auto ${title.length > CHARACTER_LIMITS.title * 0.9 ? "text-red-600" : "text-gray-500 dark:text-gray-400"}`}>
+                <p
+                  className={`text-xs ml-auto ${
+                    title.length > CHARACTER_LIMITS.title * 0.9
+                      ? "text-red-600"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
                   {title.length}/{CHARACTER_LIMITS.title}
                 </p>
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Date <span className="text-gray-500 dark:text-gray-400 font-normal">(leave empty for today)</span>
+                Date{" "}
+                <span className="text-gray-500 dark:text-gray-400 font-normal">
+                  (leave empty for today)
+                </span>
               </label>
               <input
                 type="date"
@@ -310,10 +376,10 @@ function PostPageContent() {
                   const newDate = e.target.value;
                   setDate(newDate);
                   const selectedDate = newDate || todayDate;
-                  
+
                   clearFieldError("startTime");
                   clearFieldError("endTime");
-                  
+
                   if (startTime && endTime) {
                     validateTimeRelationship(selectedDate, startTime, endTime);
                   }
@@ -324,26 +390,37 @@ function PostPageContent() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Start Time {isToday(getSelectedDate()) ? (
-                    <span className="text-gray-500 dark:text-gray-400 font-normal">(leave empty for &quot;Now&quot;)</span>
+                  Start Time{" "}
+                  {isToday(getSelectedDate()) ? (
+                    <span className="text-gray-500 dark:text-gray-400 font-normal">
+                      (leave empty for &quot;Now&quot;)
+                    </span>
                   ) : (
                     "*"
                   )}
                 </label>
                 <input
                   type="time"
-                  className={`${INPUT_CLASSES} ${fieldErrors.startTime ? "border-red-500" : ""}`}
+                  className={`${INPUT_CLASSES} ${
+                    fieldErrors.startTime ? "border-red-500" : ""
+                  }`}
                   value={startTime}
                   onChange={(e) => {
                     const newStartTime = e.target.value;
                     handleFieldChange(newStartTime, setStartTime, "startTime");
                     if (newStartTime && endTime) {
-                      validateTimeRelationship(getSelectedDate(), newStartTime, endTime);
+                      validateTimeRelationship(
+                        getSelectedDate(),
+                        newStartTime,
+                        endTime
+                      );
                     }
                   }}
                 />
                 {fieldErrors.startTime && (
-                  <p className="text-sm text-red-600 mt-1">{fieldErrors.startTime}</p>
+                  <p className="text-sm text-red-600 mt-1">
+                    {fieldErrors.startTime}
+                  </p>
                 )}
               </div>
               <div>
@@ -352,46 +429,95 @@ function PostPageContent() {
                 </label>
                 <input
                   type="time"
-                  className={`${INPUT_CLASSES} ${fieldErrors.endTime ? "border-red-500" : ""}`}
+                  className={`${INPUT_CLASSES} ${
+                    fieldErrors.endTime ? "border-red-500" : ""
+                  }`}
                   value={endTime}
                   onChange={(e) => {
                     const newEndTime = e.target.value;
-                    const isTimeRelationshipError = fieldErrors.endTime === "End time must be after start time";
+                    const isTimeRelationshipError =
+                      fieldErrors.endTime ===
+                      "End time must be after start time";
                     handleFieldChange(newEndTime, setEndTime, "endTime");
                     if (fieldErrors.endTime && !isTimeRelationshipError) {
                       clearFieldError("endTime");
                     }
                     if (startTime && newEndTime) {
-                      validateTimeRelationship(getSelectedDate(), startTime, newEndTime);
+                      validateTimeRelationship(
+                        getSelectedDate(),
+                        startTime,
+                        newEndTime
+                      );
                     } else if (isTimeRelationshipError) {
                       clearFieldError("endTime");
                     }
                   }}
                 />
                 {fieldErrors.endTime && (
-                  <p className="text-sm text-red-600 mt-1">{fieldErrors.endTime}</p>
+                  <p className="text-sm text-red-600 mt-1">
+                    {fieldErrors.endTime}
+                  </p>
                 )}
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Location *
+                Specific Location *
               </label>
               <input
-                className={`${INPUT_CLASSES} ${fieldErrors.location ? "border-red-500" : ""}`}
+                className={`${INPUT_CLASSES} ${
+                  fieldErrors.location ? "border-red-500" : ""
+                }`}
                 placeholder="e.g., Student Center, Room 205"
                 value={location}
                 maxLength={CHARACTER_LIMITS.location}
-                onChange={(e) => handleFieldChange(e.target.value, setLocation, "location")}
+                onChange={(e) =>
+                  handleFieldChange(e.target.value, setLocation, "location")
+                }
               />
               <div className="flex justify-between items-center mt-1">
                 {fieldErrors.location && (
                   <p className="text-sm text-red-600">{fieldErrors.location}</p>
                 )}
-                <p className={`text-xs ml-auto ${location.length > CHARACTER_LIMITS.location * 0.9 ? "text-red-600" : "text-gray-500 dark:text-gray-400"}`}>
+                <p
+                  className={`text-xs ml-auto ${
+                    location.length > CHARACTER_LIMITS.location * 0.9
+                      ? "text-red-600"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
                   {location.length}/{CHARACTER_LIMITS.location}
                 </p>
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Campus Location *
+              </label>
+              <select
+                className={`${INPUT_CLASSES} ${
+                  fieldErrors.campusLocation ? "border-red-500" : ""
+                }`}
+                value={campusLocation}
+                onChange={(e) =>
+                  handleFieldChange(
+                    e.target.value,
+                    setCampusLocation,
+                    "campusLocation"
+                  )
+                }
+              >
+                <option value="">Select a campus</option>
+                <option value="South Campus">South Campus</option>
+                <option value="North Campus">North Campus</option>
+                <option value="East Campus">East Campus</option>
+                <option value="West Campus">West Campus</option>
+              </select>
+              {fieldErrors.campusLocation && (
+                <p className="text-sm text-red-600 mt-1">
+                  {fieldErrors.campusLocation}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -400,13 +526,19 @@ function PostPageContent() {
               <input
                 type="number"
                 min="1"
-                className={`${INPUT_CLASSES} ${fieldErrors.quantity ? "border-red-500" : ""}`}
+                className={`${INPUT_CLASSES} ${
+                  fieldErrors.quantity ? "border-red-500" : ""
+                }`}
                 placeholder="e.g., 5"
                 value={quantity}
-                onChange={(e) => handleFieldChange(e.target.value, setQuantity, "quantity")}
+                onChange={(e) =>
+                  handleFieldChange(e.target.value, setQuantity, "quantity")
+                }
               />
               {fieldErrors.quantity && (
-                <p className="text-sm text-red-600 mt-1">{fieldErrors.quantity}</p>
+                <p className="text-sm text-red-600 mt-1">
+                  {fieldErrors.quantity}
+                </p>
               )}
             </div>
             <div>
@@ -414,18 +546,34 @@ function PostPageContent() {
                 Description *
               </label>
               <textarea
-                className={`${INPUT_CLASSES} resize-none ${fieldErrors.description ? "border-red-500" : ""}`}
+                className={`${INPUT_CLASSES} resize-none ${
+                  fieldErrors.description ? "border-red-500" : ""
+                }`}
                 placeholder="Describe the food item..."
                 rows={3}
                 value={description}
                 maxLength={CHARACTER_LIMITS.description}
-                onChange={(e) => handleFieldChange(e.target.value, setDescription, "description")}
+                onChange={(e) =>
+                  handleFieldChange(
+                    e.target.value,
+                    setDescription,
+                    "description"
+                  )
+                }
               />
               <div className="flex justify-between items-center mt-1">
                 {fieldErrors.description && (
-                  <p className="text-sm text-red-600">{fieldErrors.description}</p>
+                  <p className="text-sm text-red-600">
+                    {fieldErrors.description}
+                  </p>
                 )}
-                <p className={`text-xs ml-auto ${description.length > CHARACTER_LIMITS.description * 0.9 ? "text-red-600" : "text-gray-500 dark:text-gray-400"}`}>
+                <p
+                  className={`text-xs ml-auto ${
+                    description.length > CHARACTER_LIMITS.description * 0.9
+                      ? "text-red-600"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
                   {description.length}/{CHARACTER_LIMITS.description}
                 </p>
               </div>
@@ -445,7 +593,11 @@ function PostPageContent() {
                 }}
               />
               {previewUrl && (
-                <img src={previewUrl} alt="preview" className="mt-2 w-full h-40 object-cover rounded" />
+                <img
+                  src={previewUrl}
+                  alt="preview"
+                  className="mt-2 w-full h-40 object-cover rounded"
+                />
               )}
             </div>
             <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
@@ -459,7 +611,10 @@ function PostPageContent() {
                 htmlFor="acknowledge"
                 className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer leading-relaxed"
               >
-                I acknowledge that I am posting legitimate food items and will be available at the specified time and location. I understand that false or misleading posts may result in account restrictions.
+                I acknowledge that I am posting legitimate food items and will
+                be available at the specified time and location. I understand
+                that false or misleading posts may result in account
+                restrictions.
               </label>
             </div>
             <Button
