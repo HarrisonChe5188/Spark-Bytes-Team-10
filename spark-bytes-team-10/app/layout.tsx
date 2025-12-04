@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "Spark!Bytes",
   description: "Share food with the BU community.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 const hostGrotesk = Host_Grotesk({
