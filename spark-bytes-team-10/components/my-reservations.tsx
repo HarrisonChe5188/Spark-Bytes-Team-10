@@ -211,14 +211,14 @@ export default function MyReservations() {
 
   const renderReservation = (reservation: ReservedFood, isEnded: boolean = false) => {
     const supabase = createClient();
-    let imageUrl: string | null = null;
+    let imageUrl: string | null = "/fallback.png";
     try {
       if (reservation.posts.image_path) {
         const { data } = supabase.storage.from('food_pictures').getPublicUrl(reservation.posts.image_path);
-        imageUrl = data?.publicUrl || null;
+        imageUrl = data?.publicUrl || "/fallback.png";
       }
     } catch {
-      imageUrl = null;
+      imageUrl = "/fallback.png";
     }
 
     return (
@@ -227,12 +227,28 @@ export default function MyReservations() {
         className={`p-5 border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 transition-all duration-200 ${isEnded ? 'opacity-60' : 'hover:border-red-300 dark:hover:border-red-800'}`}
       >
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Image - only shown on mobile */}
-          {imageUrl && (
-            <div className="flex-shrink-0 w-full md:hidden">
-              <img src={imageUrl} alt={reservation.posts.title || 'image'} className="w-full h-48 object-cover rounded-md" />
-            </div>
-          )}
+          {/* Image - mobile (full width) */}
+{imageUrl && (
+  <div className="flex-shrink-0 w-full md:hidden">
+    <img 
+      src={imageUrl || '/fallback.png'} 
+      alt={reservation.posts.title || 'image'} 
+      className="w-full h-48 object-cover rounded-md" 
+    />
+  </div>
+)}
+
+{/* Image - desktop (fixed side image) */}
+{imageUrl && (
+  <div className="hidden md:block flex-shrink-0">
+    <img 
+      src={imageUrl || '/fallback.png'} 
+      alt={reservation.posts.title || 'image'} 
+      className="w-40 h-40 object-cover rounded-md border border-gray-200 dark:border-gray-700"
+    />
+  </div>
+)}
+
           {/* Content */}
           <div className="flex-1 flex flex-col">
             <div className="flex items-start justify-between mb-3">

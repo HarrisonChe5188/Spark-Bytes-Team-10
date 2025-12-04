@@ -202,15 +202,15 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
   };
 
   // Prepare image URL if provided (public bucket flow)
-  let imageUrl: string | null = null;
+  let imageUrl: string | null = "/fallback.png";
   try {
     if (post.image_path) {
       const { data } = supabase.storage.from('food_pictures').getPublicUrl(post.image_path);
-      imageUrl = data?.publicUrl || null;
+      imageUrl = data?.publicUrl || "/fallback.png";
     }
   } catch {
     // ignore
-    imageUrl = null;
+    imageUrl = "/fallback.png";
   }
 
   const handleInterested = async () => {
@@ -483,6 +483,7 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
     }
   };
 
+
   return (
     <>
       {/* Edit Modal */}
@@ -752,12 +753,34 @@ export default function PostCard({ post, isReserved: initialIsReserved = false, 
 
       <div className="p-5 border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-800 transition-all duration-200">
         <div className="flex flex-col md:flex-row gap-4">
-        {/* Image - only shown on mobile */}
-        {imageUrl && (
-          <div className="flex-shrink-0 w-full md:hidden">
-            <img src={imageUrl} alt={post.title || 'image'} className="w-full h-48 object-cover rounded-md" />
-          </div>
-        )}
+        {/* Image - mobile (full width, fixed height) */}
+{imageUrl && (
+  <div className="w-full md:hidden">
+    <div className="w-full h-48 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
+      <img
+        src={imageUrl || "/fallback.png"}
+        alt={post.title || "image"}
+        className="w-full h-full object-cover"
+      />
+    </div>
+  </div>
+)}
+
+{/* Image - desktop (consistent width, variable height, perfect crop) */}
+{imageUrl && (
+  <div className="hidden md:flex flex-shrink-0">
+    <div className="w-40 h-40 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
+      <img
+        src={imageUrl || "/fallback.png"}
+        alt={post.title || "image"}
+        className="w-full h-full object-cover"
+      />
+    </div>
+  </div>
+)}
+
+
+
         {/* Content */}
         <div className="flex-1 flex flex-col">
           <div className="flex items-start justify-between mb-3">
