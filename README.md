@@ -7,7 +7,7 @@ Ensure the following dependencies are installed:
 
 ## Getting Started
 
-### 1. Clone the Repository
+### 1. Clone the Repository and CD into Root Directory
 ```bash
 git clone https://github.com/HarrisonChe5188/Spark-Bytes-Team-10.git
 cd Spark-Bytes-Team-10
@@ -15,7 +15,6 @@ cd Spark-Bytes-Team-10
 
 ### 2. Setup
 ```bash
-cd client
 npm install
 ```
 
@@ -23,7 +22,12 @@ npm install
 
 ### Start the Application
 ```bash
-cd client
 npm run dev
 ```
 The application will be available at http://localhost:3000.
+
+### Testing
+Test suites can be run on our API routes.
+```bash
+npm test
+```
