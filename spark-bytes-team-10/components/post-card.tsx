@@ -10,6 +10,7 @@ interface PostCardProps {
   post: Post;
   isReserved?: boolean;
   currentUserId?: string | null;
+  isAdmin?: boolean;
   onPostUpdated?: () => void;
   authorNickname?: string | null;
   authorAvatar?: string | null;
@@ -82,6 +83,7 @@ export default function PostCard({
   post,
   isReserved: initialIsReserved = false,
   currentUserId = null,
+  isAdmin = false,
   onPostUpdated,
   authorNickname = null,
   authorAvatar = null,
@@ -533,6 +535,9 @@ export default function PostCard({
     if (!post.end_time) return false;
     return new Date(post.end_time) < new Date();
   };
+
+  const postEnded = isPostEnded();
+  const canManage = isAdmin || currentUserId === post.user_id;
 
   const formatNowToEndTime = (endTime: string): string => {
     const dateEST = getESTParts(new Date(endTime));
@@ -1051,46 +1056,47 @@ export default function PostCard({
                     {post.description}
                   </p>
                 )}
-                {!isPostEnded() ? (
+                {canManage ? (
                   <div className="flex flex-col items-end gap-1">
-                    {currentUserId === post.user_id ? (
-                      <div className="flex gap-3">
-                        <button
-                          onClick={handleEdit}
-                          className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={handleDelete}
-                          className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <Button
-                          onClick={handleInterested}
-                          disabled={isLoading || isReserved}
-                          className={`font-medium whitespace-nowrap ${
-                            isReserved
-                              ? "bg-green-600 hover:bg-green-700"
-                              : "bg-red-600 hover:bg-red-700"
-                          } text-white`}
-                          size="sm"
-                        >
-                          {isLoading
-                            ? "Reserving..."
-                            : isReserved
-                            ? "✓ Reserved"
-                            : "I'm interested"}
-                        </Button>
-                        {error && (
-                          <p className="text-xs text-red-500">{error}</p>
-                        )}
-                      </>
+                    {postEnded && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                        Ended
+                      </span>
                     )}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleEdit}
+                        className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        className="text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ) : !postEnded ? (
+                  <div className="flex flex-col items-end gap-1">
+                    <Button
+                      onClick={handleInterested}
+                      disabled={isLoading || isReserved}
+                      className={`font-medium whitespace-nowrap ${
+                        isReserved
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-red-600 hover:bg-red-700"
+                      } text-white`}
+                      size="sm"
+                    >
+                      {isLoading
+                        ? "Reserving..."
+                        : isReserved
+                        ? "✓ Reserved"
+                        : "I'm interested"}
+                    </Button>
+                    {error && <p className="text-xs text-red-500">{error}</p>}
                   </div>
                 ) : (
                   <div className="flex flex-col items-end gap-1">

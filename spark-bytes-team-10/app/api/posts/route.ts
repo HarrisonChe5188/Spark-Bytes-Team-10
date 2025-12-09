@@ -33,6 +33,10 @@ export async function PUT(request: Request) {
       )
     }
 
+    const isAdmin =
+      ((user?.app_metadata as Record<string, unknown> | undefined)?.role === 'admin') ||
+      ((user?.user_metadata as Record<string, unknown> | undefined)?.is_admin === true);
+
     // Check if post exists and belongs to user
     const { data: existingPost, error: fetchError } = await supabase
       .from('posts')
@@ -47,7 +51,7 @@ export async function PUT(request: Request) {
       )
     }
 
-    if (existingPost.user_id !== user.id) {
+    if (!isAdmin && existingPost.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Unauthorized - you can only edit your own posts' },
         { status: 403 }
@@ -191,6 +195,10 @@ export async function DELETE(request: Request) {
       )
     }
 
+    const isAdmin =
+      ((user?.app_metadata as Record<string, unknown> | undefined)?.role === 'admin') ||
+      ((user?.user_metadata as Record<string, unknown> | undefined)?.is_admin === true);
+
     // Check if post exists and belongs to user
     const { data: existingPost, error: fetchError } = await supabase
       .from('posts')
@@ -205,7 +213,7 @@ export async function DELETE(request: Request) {
       )
     }
 
-    if (existingPost.user_id !== user.id) {
+    if (!isAdmin && existingPost.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Unauthorized - you can only delete your own posts' },
         { status: 403 }
