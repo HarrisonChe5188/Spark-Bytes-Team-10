@@ -1,7 +1,7 @@
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
-export default function ProfileLayout({
+export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
