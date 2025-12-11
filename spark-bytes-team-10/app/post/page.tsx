@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import Cropper from "react-easy-crop";
 
 const INPUT_CLASSES = "w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent";
 
@@ -49,12 +50,68 @@ function convertESTToUTC(dateStr: string, timeStr: string): string {
   return utcDate.toISOString();
 }
 
+function createImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", (error) => reject(error));
+    image.setAttribute("crossOrigin", "anonymous");
+    image.src = url;
+  });
+}
+
+function getRadianAngle(degreeValue: number) {
+  return (degreeValue * Math.PI) / 180;
+}
+
+// Creates a cropped image blob using canvas
+async function getCroppedImg(imageSrc: string, pixelCrop: any, rotation = 0) {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) throw new Error("Could not get canvas context");
+
+  const rotRad = getRadianAngle(rotation);
+
+  // calculate bounding box of the rotated image
+  const bBoxWidth =
+    Math.abs(image.width * Math.cos(rotRad)) +
+    Math.abs(image.height * Math.sin(rotRad));
+  const bBoxHeight =
+    Math.abs(image.width * Math.sin(rotRad)) +
+    Math.abs(image.height * Math.cos(rotRad));
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.translate(-pixelCrop.x, -pixelCrop.y);
+
+  ctx.save();
+  // move to center
+  ctx.translate(bBoxWidth / 2, bBoxHeight / 2);
+  ctx.rotate(rotRad);
+  ctx.drawImage(image, -image.width / 2, -image.height / 2);
+  ctx.restore();
+
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/png");
+  });
+}
+
 function PostPageContent() {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState<"how-it-works" | "form">("how-it-works");
   const [title, setTitle] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Cropping state
+  const [isEditingImage, setIsEditingImage] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -229,7 +286,11 @@ function PostPageContent() {
       if (startDateTime) formData.append('start_time', startDateTime);
       formData.append('end_time', endDateTime);
       if (selectedFile) {
-        formData.append('image', selectedFile);
+        if (selectedFile instanceof File) {
+          formData.append('image', selectedFile, selectedFile.name);
+        } else {
+          formData.append('image', selectedFile);
+        }
       }
 
       const response = await fetch('/api/posts', {
@@ -588,11 +649,110 @@ function PostPageContent() {
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
                   setSelectedFile(file);
-                  if (file) setPreviewUrl(URL.createObjectURL(file));
-                  else setPreviewUrl(null);
+                  if (file) {
+                    const url = URL.createObjectURL(file);
+                    setPreviewUrl(url);
+                    setIsEditingImage(true);
+                    setCroppedBlob(null);
+                    setCrop({ x: 0, y: 0 });
+                    setZoom(1);
+                    setRotation(0);
+                  } else {
+                    setPreviewUrl(null);
+                  }
                 }}
               />
-              {previewUrl && (
+
+              {/* Cropping UI */}
+              {isEditingImage && previewUrl && (
+                <div className="mt-2">
+                  <div className="relative w-full h-64 bg-gray-50">
+                    <Cropper
+                      image={previewUrl}
+                      crop={crop}
+                      zoom={zoom}
+                      rotation={rotation}
+                      aspect={4 / 3}
+                      onCropChange={setCrop}
+                      onZoomChange={setZoom}
+                      onRotationChange={setRotation}
+                      onCropComplete={(_croppedArea, croppedAreaPixelsParam) =>
+                        setCroppedAreaPixels(croppedAreaPixelsParam)
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-3">
+                    <label className="flex-1">
+                      Zoom
+                      <input
+                        type="range"
+                        min={1}
+                        max={3}
+                        step={0.1}
+                        value={zoom}
+                        onChange={(e) => setZoom(Number(e.target.value))}
+                        className="w-full"
+                      />
+                    </label>
+
+                    <label className="w-32">
+                      Rotate
+                      <input
+                        type="range"
+                        min={0}
+                        max={360}
+                        step={1}
+                        value={rotation}
+                        onChange={(e) => setRotation(Number(e.target.value))}
+                        className="w-full"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const blob = await getCroppedImg(
+                            previewUrl,
+                            croppedAreaPixels,
+                            rotation
+                          );
+                          if (blob) {
+                            setCroppedBlob(blob);
+                            const fileName = selectedFile?.name || "image.png";
+                            const croppedFile = new File([blob], fileName, {
+                              type: blob.type || "image/png",
+                            });
+                            setSelectedFile(croppedFile);
+                            try {
+                              URL.revokeObjectURL(previewUrl);
+                            } catch (e) {}
+                            setPreviewUrl(URL.createObjectURL(croppedFile));
+                            setIsEditingImage(false);
+                          }
+                        } catch (err) {
+                          console.error("Crop failed:", err);
+                        }
+                      }}
+                    >
+                      Apply Crop
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        setIsEditingImage(false);
+                      }}
+                      variant="outline"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {previewUrl && !isEditingImage && (
                 <img
                   src={previewUrl}
                   alt="preview"
