@@ -1,7 +1,7 @@
-import ProfileForm from "@/components/profile-form";
+import SettingsForm from "@/components/settings-form";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function ProfilePage() {
+export default async function SettingsPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -10,7 +10,7 @@ export default async function ProfilePage() {
   if (!user) {
     return (
       <div className="max-w-2xl mx-auto p-6">
-        <p>Please sign in to edit your profile.</p>
+        <p>Please sign in to access settings.</p>
       </div>
     );
   }
@@ -23,8 +23,8 @@ export default async function ProfilePage() {
 
   return (
     <main className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4">Edit Profile</h1>
-      <ProfileForm
+      <h1 className="text-2xl font-semibold mb-4">Settings</h1>
+      <SettingsForm
         userId={user.id}
         initialNickname={profileData?.nickname ?? ""}
         initialAvatarUrl={profileData?.avatar_url ?? null}

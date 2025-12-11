@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
-import ProfileDropdown from "@/components/profile-dropdown";
+import UserDropdown from "@/components/user-dropdown";
 
 export function Header() {
   const router = useRouter();
@@ -42,9 +42,9 @@ export function Header() {
           >
             Saved
           </button>
-          <ProfileDropdown>
+          <UserDropdown>
             <LogoutButton />
-          </ProfileDropdown>
+          </UserDropdown>
         </nav>
       </div>
     </header>

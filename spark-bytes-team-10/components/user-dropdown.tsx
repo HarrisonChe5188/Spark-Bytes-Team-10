@@ -8,11 +8,12 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { User } from "lucide-react";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function ProfileDropdown({
+export default function UserDropdown({
   children,
 }: {
   children: React.ReactNode;
@@ -48,8 +49,18 @@ export default function ProfileDropdown({
       }
     })();
 
+    // Listen for profile updates from settings page
+    const handleProfileUpdate = (event: CustomEvent<{ avatarUrl: string | null; nickname: string | null }>) => {
+      if (!mounted) return;
+      setAvatarUrl(event.detail.avatarUrl);
+      setNickname(event.detail.nickname);
+    };
+
+    window.addEventListener('userProfileUpdated', handleProfileUpdate as EventListener);
+
     return () => {
       mounted = false;
+      window.removeEventListener('userProfileUpdated', handleProfileUpdate as EventListener);
     };
   }, []);
 
@@ -58,10 +69,13 @@ export default function ProfileDropdown({
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="flex items-center gap-2">
           {avatarUrl ? (
-            <img
+            <NextImage
               src={avatarUrl}
               alt={nickname ?? "avatar"}
+              width={28}
+              height={28}
               className="w-7 h-7 rounded-md object-cover"
+              unoptimized
             />
           ) : (
             <User size={20} className="text-muted-foreground" />
@@ -70,10 +84,10 @@ export default function ProfileDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem
-          onClick={() => router.push("/profile")}
+          onClick={() => router.push("/settings")}
           className="cursor-pointer"
         >
-          Profile
+          Settings
         </DropdownMenuItem>
         {children}
       </DropdownMenuContent>
