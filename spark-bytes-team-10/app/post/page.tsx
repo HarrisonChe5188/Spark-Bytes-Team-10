@@ -64,35 +64,36 @@ function getRadianAngle(degreeValue: number) {
   return (degreeValue * Math.PI) / 180;
 }
 
-// Creates a cropped image blob using canvas
-async function getCroppedImg(imageSrc: string, pixelCrop: any, rotation = 0) {
+// Simple cropped image blob using the pixel crop returned from the cropper.
+// This intentionally ignores rotation to keep the output predictable and
+// to match what the user sees in the cropper preview. If you need rotated
+// crops, we can add a more advanced implementation later.
+async function getCroppedImg(imageSrc: string, pixelCrop: any) {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
   if (!ctx) throw new Error("Could not get canvas context");
 
-  const rotRad = getRadianAngle(rotation);
+  // Use the pixelCrop directly. react-easy-crop provides pixel coordinates
+  // relative to the source image when using `onCropComplete`.
+  const { width, height, x, y } = pixelCrop;
 
-  // calculate bounding box of the rotated image
-  const bBoxWidth =
-    Math.abs(image.width * Math.cos(rotRad)) +
-    Math.abs(image.height * Math.sin(rotRad));
-  const bBoxHeight =
-    Math.abs(image.width * Math.sin(rotRad)) +
-    Math.abs(image.height * Math.cos(rotRad));
+  canvas.width = Math.round(width);
+  canvas.height = Math.round(height);
 
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
-
-  ctx.translate(-pixelCrop.x, -pixelCrop.y);
-
-  ctx.save();
-  // move to center
-  ctx.translate(bBoxWidth / 2, bBoxHeight / 2);
-  ctx.rotate(rotRad);
-  ctx.drawImage(image, -image.width / 2, -image.height / 2);
-  ctx.restore();
+  // draw the cropped area from the source image to the canvas
+  ctx.drawImage(
+    image,
+    Math.round(x),
+    Math.round(y),
+    Math.round(width),
+    Math.round(height),
+    0,
+    0,
+    Math.round(width),
+    Math.round(height)
+  );
 
   return new Promise<Blob | null>((resolve) => {
     canvas.toBlob((blob) => resolve(blob), "image/png");
@@ -714,11 +715,7 @@ function PostPageContent() {
                     <Button
                       onClick={async () => {
                         try {
-                          const blob = await getCroppedImg(
-                            previewUrl,
-                            croppedAreaPixels,
-                            rotation
-                          );
+                          const blob = await getCroppedImg(previewUrl, croppedAreaPixels);
                           if (blob) {
                             setCroppedBlob(blob);
                             const fileName = selectedFile?.name || "image.png";

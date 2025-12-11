@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function PUT(request: Request) {
@@ -23,6 +23,8 @@ export async function PUT(request: Request) {
     }
 
     const supabase = await createClient()
+    // privileged client for uploads/inserts (service role)
+    const adminSupabase = createServiceRoleClient()
 
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -63,7 +65,7 @@ export async function PUT(request: Request) {
     // Handle image removal
     if (removeImage && existingPost.image_path) {
       try {
-        await supabase.storage
+        await adminSupabase.storage
           .from('food_pictures')
           .remove([existingPost.image_path])
       } catch (err) {
@@ -93,7 +95,7 @@ export async function PUT(request: Request) {
         const arrayBuffer = await imageFile.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await adminSupabase.storage
           .from('food_pictures')
           .upload(path, buffer, { cacheControl: '3600', upsert: false })
 
@@ -143,7 +145,7 @@ export async function PUT(request: Request) {
       image_path: imagePath,
     }
 
-    const { data: post, error: updateError } = await supabase
+    const { data: post, error: updateError } = await adminSupabase
       .from('posts')
       .update(updateData)
       .eq('id', postId)
@@ -185,6 +187,7 @@ export async function DELETE(request: Request) {
     }
 
     const supabase = await createClient()
+    const adminSupabase = createServiceRoleClient()
 
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -223,9 +226,9 @@ export async function DELETE(request: Request) {
     // Delete associated image if it exists
     if (existingPost.image_path) {
       try {
-        await supabase.storage
-          .from('food_pictures')
-          .remove([existingPost.image_path])
+          await adminSupabase.storage
+            .from('food_pictures')
+            .remove([existingPost.image_path])
       } catch (err) {
         console.error('Error removing image:', err)
         // Continue with post deletion even if image removal fails
@@ -233,13 +236,13 @@ export async function DELETE(request: Request) {
     }
 
     // Delete all reservations for this post first
-    await supabase
+    await adminSupabase
       .from('reservations')
       .delete()
       .eq('post_id', postId)
 
     // Delete the post
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await adminSupabase
       .from('posts')
       .delete()
       .eq('id', postId)
@@ -285,6 +288,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient()
+    const adminSupabase = createServiceRoleClient()
 
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -307,7 +311,7 @@ export async function POST(request: Request) {
         const arrayBuffer = await imageFile.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await adminSupabase.storage
           .from('food_pictures')
           .upload(path, buffer, { cacheControl: '3600', upsert: false })
 
@@ -327,9 +331,10 @@ export async function POST(request: Request) {
     }
 
     // Insert the post with image_path
-    const { data: post, error: insertError } = await supabase
+    const { data: post, error: insertError } = await adminSupabase
       .from('posts')
       .insert({
+        user_id: user.id,
         title: title.trim(),
         start_time: startTime ? startTime : null,
         end_time: endTime,

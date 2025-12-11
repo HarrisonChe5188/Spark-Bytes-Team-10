@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 /**
@@ -30,5 +31,21 @@ export async function createClient() {
         },
       },
     },
+  );
+}
+
+/**
+ * Create a Supabase client using the service role key. Use this only on
+ * trusted server-side code (API routes / server actions) when you need
+ * privileged access such as storage uploads or writes guarded by RLS.
+ */
+export function createServiceRoleClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Missing Supabase service role configuration');
+  }
+
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 }
