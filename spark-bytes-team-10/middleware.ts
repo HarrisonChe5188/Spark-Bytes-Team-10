@@ -1,35 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // Check environment variables exist
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  ) {
-    return NextResponse.next({ request });
-  }
-
-  // Redirect unauthenticated users (except public paths)
-  const pathname = request.nextUrl.pathname;
-  
-  if (
-    pathname !== "/" &&
-    !pathname.startsWith("/login") &&
-    !pathname.startsWith("/auth") &&
-    !pathname.startsWith("/about") &&
-    !pathname.startsWith("/sign-up")
-  ) {
-    // Note: At edge runtime, we can't fully verify auth without importing restricted modules
-    // This is a simplified check - full auth validation should happen in route handlers
-    const authCookie = request.cookies.get("sb-auth-token");
-    
-    if (!authCookie) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/login";
-      return NextResponse.redirect(url);
-    }
-  }
-
+  // Just pass through - let route handlers and server actions handle auth
+  // This avoids the Edge Runtime import issues
   return NextResponse.next({ request });
 }
 
