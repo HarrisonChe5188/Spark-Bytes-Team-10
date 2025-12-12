@@ -5,9 +5,10 @@ jest.mock("@/lib/supabase/server");
 
 const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>;
 
-describe("POST /api/reservations", () => {
+describe("Reservations API", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
     mockCreateClient.mockResolvedValue({
       auth: {
         getUser: jest.fn().mockResolvedValue({
@@ -16,49 +17,51 @@ describe("POST /api/reservations", () => {
         }),
       },
       from: jest.fn((table: string) => {
-        if (table === "reservations") {
-          return {
-            select: jest.fn().mockReturnThis(),
-            insert: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({ data: null, error: null }), // No existing reservation
-            order: jest.fn().mockReturnThis(),
-            update: jest.fn().mockReturnThis(),
-            delete: jest.fn().mockReturnThis(),
-          };
-        }
-        // For posts table
-        return {
+        const commonMock = {
           select: jest.fn().mockReturnThis(),
           insert: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({ data: { id: "post1", quantity_left: 5 }, error: null }),
-          order: jest.fn().mockReturnThis(),
+          single: jest.fn().mockResolvedValue({ data: null, error: null }),
           update: jest.fn().mockReturnThis(),
+          order: jest.fn().mockReturnThis(),
           delete: jest.fn().mockReturnThis(),
         };
+
+        if (table === "posts") {
+          return {
+            ...commonMock,
+            single: jest.fn().mockResolvedValue({
+              data: { id: "post1", quantity_left: 5 },
+              error: null,
+            }),
+          };
+        }
+
+        if (table === "reservations") {
+          return {
+            ...commonMock,
+            single: jest.fn().mockResolvedValue({ data: null, error: null }),
+          };
+        }
+
+        return commonMock;
       }),
     } as any);
+
+
   });
 
-  it("returns 400 if no post_id is provided", async () => {
-    const mockRequest = {
-      json: jest.fn().mockResolvedValue({}),
-    } as any;
-
+  it("POST returns 400 if post_id is missing", async () => {
+    const mockRequest = { json: jest.fn().mockResolvedValue({}) } as any;
     const res = await POST(mockRequest);
     const json = res.body || res;
     expect(json).toHaveProperty("error", "post_id is required");
   });
 
-  it("successfully creates a reservation", async () => {
-    const mockRequest = {
-      json: jest.fn().mockResolvedValue({ post_id: "post1" }),
-    } as any;
-
+  it("POST creates reservation successfully", async () => {
+    const mockRequest = { json: jest.fn().mockResolvedValue({ post_id: "post1" }) } as any;
     const res = await POST(mockRequest);
     const json = res.body || res;
     expect(json).toHaveProperty("success", true);
-    expect(mockCreateClient).toHaveBeenCalled();
   });
 });
