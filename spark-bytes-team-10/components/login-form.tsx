@@ -27,15 +27,11 @@ export function LoginForm({
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/home`,
-          queryParams: {
-            prompt: 'select_account',
-            hd: 'bu.edu',
-          },
-        },
-      });
+      provider: "google",
+      options: {
+        redirectTo: process.env.NEXT_PUBLIC_SITE_URL, // <-- dynamic
+      },
+    });
       if (error) throw error;
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
