@@ -29,7 +29,11 @@ export function LoginForm({
       const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: process.env.NEXT_PUBLIC_SITE_URL, // <-- dynamic
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`, // <-- dynamic
+        queryParams: {
+            prompt: 'select_account',
+            hd: 'bu.edu',
+          },
       },
     });
       if (error) throw error;
